@@ -1,0 +1,10 @@
+{
+    "storage":{
+       "file":{
+          "path":"/vault/data"         
+       }
+    },
+    "ui":"true",
+    "plugin_directory":"/vault/plugins",
+    "disable_mlock": true
+}
