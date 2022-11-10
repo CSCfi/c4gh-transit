@@ -2,10 +2,13 @@ package c4ghtransit
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/neicnordic/crypt4gh/keys"
+	"golang.org/x/crypto/chacha20poly1305"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -135,10 +138,11 @@ func (b *c4ghTransitBackend) pathKeyUpdate(
 }
 
 type pubKeyRet struct {
-	Name         string    `json:"project" structs:"project" mapstructure:"project"`
-	PublicKey64  string    `json:"public_key_base_64" structs:"public_key_64" mapstructure:"public_key_64"`
-	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
+	Name            string    `json:"project" structs:"project" mapstructure:"project"`
+	PublicKey64     string    `json:"public_key_base_64" structs:"public_key_64" mapstructure:"public_key_64"`
+	PublicKeyC4gh   string    `json:"public_key_c4gh" structs:"public_key_c4gh" mapstructure:"public_key_c4gh"`
+	PublicKeyC4gh64 string    `json:"public_key_c4gh_64" structs:"public_key_c4gh_64" mapstructure:"public_key_c4gh_64"`
+	CreationTime    time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
 // Display key metadata, e.g. expiration, public key entry
@@ -207,11 +211,23 @@ func (b *c4ghTransitBackend) pathKeyRead(
 
 	retKeys := map[string]map[string]interface{}{}
 	for k, v := range p.Keys {
+		var c4ghPublicKey [chacha20poly1305.KeySize]byte
+		var edPublicKeyBytes [chacha20poly1305.KeySize]byte
+		publicKey, err := base64.StdEncoding.DecodeString(v.FormattedPublicKey)
+		if err != nil {
+			return nil, err
+		}
+
+		copy(edPublicKeyBytes[:], publicKey)
+		keys.PublicKeyToCurve25519(&c4ghPublicKey, publicKey)
+		c4ghFormattedPublicKey := base64.StdEncoding.EncodeToString(c4ghPublicKey[:])
+
 		key := pubKeyRet{
-			Name:         "ed25519",
-			PublicKey64:  v.FormattedPublicKey,
-			PublicKey:    fmt.Sprintf("-----BEGIN CRYPT4GH PUBLIC KEY-----\n%s\n-----END CRYPT4GH PUBLIC KEY-----\n", v.FormattedPublicKey),
-			CreationTime: v.CreationTime,
+			Name:            "ed25519",
+			PublicKey64:     v.FormattedPublicKey,
+			PublicKeyC4gh:   fmt.Sprintf("-----BEGIN CRYPT4GH PUBLIC KEY-----\n%s\n-----END CRYPT4GH PUBLIC KEY-----\n", c4ghFormattedPublicKey),
+			PublicKeyC4gh64: c4ghFormattedPublicKey,
+			CreationTime:    v.CreationTime,
 		}
 		if key.CreationTime.IsZero() {
 			key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
@@ -229,7 +245,7 @@ func (b *c4ghTransitBackend) pathListKeys(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	entries, err := req.Storage.List(ctx, "keys/")
+	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return nil, err
 	}
