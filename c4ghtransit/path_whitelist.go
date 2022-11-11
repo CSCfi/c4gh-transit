@@ -2,11 +2,14 @@ package c4ghtransit
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/neicnordic/crypt4gh/keys"
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 const (
@@ -67,7 +70,14 @@ func (b *c4ghTransitBackend) pathWhitelist() *framework.Path {
 
 func (b *c4ghTransitBackend) pathWhitelistList() *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/?$",
+		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/?$",
+		Fields: map[string]*framework.FieldSchema{
+			"project": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that the header is uploaded for",
+				Required:    true,
+			},
+		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListWhitelist,
@@ -84,7 +94,9 @@ func (b *c4ghTransitBackend) pathListWhitelist(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	entries, err := req.Storage.List(ctx, "whitelist/")
+	project := d.Get("project").(string)
+	listPath := fmt.Sprintf("whitelist/%s/", project)
+	entries, err := req.Storage.List(ctx, listPath)
 	if err != nil {
 		return nil, err
 	}
@@ -134,14 +146,6 @@ func (b *c4ghTransitBackend) pathWhitelistWrite(
 	flavor := d.Get("flavor").(string)
 	service := d.Get("service").(string)
 
-	switch strings.ToLower(flavor) {
-	case "crypt4gh":
-		return logical.ErrorResponse("Crypt4gh native keys not yet supported."), nil
-	case "ed25519":
-	default:
-		return logical.ErrorResponse("Key flavor not supported."), nil
-	}
-
 	if pubkey == "" {
 		return logical.ErrorResponse("Missing public key"), nil
 	}
@@ -150,11 +154,31 @@ func (b *c4ghTransitBackend) pathWhitelistWrite(
 		return logical.ErrorResponse("Service that owns the key needs to be specified."), nil
 	}
 
+	var formattedKey string
+
+	switch strings.ToLower(flavor) {
+	case "crypt4gh":
+		formattedKey = pubkey
+	case "ed25519":
+		var edPublicKeyBytes [chacha20poly1305.KeySize]byte
+		var c4ghPublicKey [chacha20poly1305.KeySize]byte
+		edPubKey, err := base64.StdEncoding.DecodeString(pubkey)
+		if err != nil {
+			return nil, err
+		}
+
+		copy(edPublicKeyBytes[:], edPubKey)
+		keys.PublicKeyToCurve25519(&c4ghPublicKey, edPubKey)
+		formattedKey = base64.StdEncoding.EncodeToString(c4ghPublicKey[:])
+	default:
+		return logical.ErrorResponse("Key flavor not supported."), nil
+	}
+
 	keyPath := fmt.Sprintf("whitelist/%s/%s", name, service)
 
 	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
-		"key":     pubkey,
-		"flavor":  flavor,
+		"key":     formattedKey,
+		"flavor":  "crypt4gh",
 		"service": service,
 		"project": name,
 	})

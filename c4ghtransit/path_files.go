@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -13,17 +12,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/neicnordic/crypt4gh/keys"
 	"github.com/neicnordic/crypt4gh/model/headers"
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
 type reencryptFileEntry struct {
-	Header     string `json:"header"`
-	Keyversion int    `json:"keyversion"`
-	Added      string `json:"added"`
-}
-
-type reencryptFileReturn struct {
-	Header     string `json:"header"`
-	Keyversion int    `json:"keyversion"`
+	Header     string    `json:"header" structs:"header" mapstructure:"header"`
+	Keyversion int       `json:"keyversion" structs:"keyversion" mapstructure:"keyversion"`
+	Added      time.Time `json:"added" struct:"added" mapstructure:"added"`
 }
 
 // pathKeys extends the Vault API with a "/keys"
@@ -70,7 +65,7 @@ func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 // List stored file headers
 func (b *c4ghTransitBackend) pathListFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project"),
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -95,7 +90,7 @@ func (b *c4ghTransitBackend) pathFilesList(
 	d *framework.FieldData,
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
-	listPath := fmt.Sprintf("files/%s", project)
+	listPath := fmt.Sprintf("files/%s/", project)
 	entries, err := req.Storage.List(ctx, listPath)
 
 	if err != nil {
@@ -129,13 +124,11 @@ func (b *c4ghTransitBackend) pathFilesRead(
 		return nil, err
 	}
 
-	decHeader := make([]byte, base64.StdEncoding.DecodedLen(len(result.Header)))
-	n, err := base64.StdEncoding.Decode(decHeader, []byte(result.Header))
+	decHeader, err := base64.StdEncoding.DecodeString(result.Header)
 	if err != nil {
 		fmt.Println("decode error:", err)
 		return logical.ErrorResponse(("Incorrectly formed header.")), nil
 	}
-	decHeader = decHeader[:n]
 	binaryHeader, err := headers.ReadHeader(bytes.NewReader(decHeader))
 	if err != nil {
 		return nil, err
@@ -155,6 +148,7 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 	pkey, err := p.GetKey(nil, result.Keyversion, p.KeySize)
 	if err != nil {
 		return nil, err
@@ -164,11 +158,13 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	}
 
 	// Copy the key to a fixed length array since NewHeader is picky
-	var key [32]byte
-	copy(key[:], pkey[:32])
+	var edPrivkeyBytes [chacha20poly1305.KeySize * 2]byte
+	var privkey [chacha20poly1305.KeySize]byte
+	copy(edPrivkeyBytes[:], pkey)
+	keys.PrivateKeyToCurve25519(&privkey, pkey)
 
 	buffer := bytes.NewBuffer(binaryHeader)
-	header, err := headers.NewHeader(buffer, key)
+	header, err := headers.NewHeader(buffer, privkey)
 	if err != nil {
 		return nil, err
 	}
@@ -177,10 +173,7 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	if err != nil {
 		return nil, err
 	}
-	// dataEditList, err := header.GetDataEditListHeaderPacket()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	dataEditList := header.GetDataEditListHeaderPacket()
 
 	firstDataEncryptionParametersHeader := (*dataEncryptionParametersHeaderPackets)[0]
 	for _, dataEncryptionParametersHeader := range *dataEncryptionParametersHeaderPackets {
@@ -199,13 +192,17 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	}
 
 	// Get the allowed receivers from whitelist
-	keylist, err := req.Storage.List(ctx, "whitelist/"+project)
+	listPath := fmt.Sprintf("whitelist/%s/", project)
+	keylist, err := req.Storage.List(ctx, listPath)
 	if err != nil {
 		return nil, err
 	}
+	if keylist == nil {
+		return logical.ErrorResponse("no whitelisted keys were available"), nil
+	}
 
 	arrln := len(keylist)
-	receivers := make([][32]byte, arrln)
+	receivers := make([][chacha20poly1305.KeySize]byte, arrln)
 
 	var keyEntry transitWhitelistEntry
 	for index, element := range keylist {
@@ -219,11 +216,15 @@ func (b *c4ghTransitBackend) pathFilesRead(
 			receivers = nil
 			return nil, err
 		}
-		receivers[index], err = keys.ReadPublicKey(strings.NewReader(keyEntry.Key))
+
+		pubkey, err := base64.StdEncoding.DecodeString(keyEntry.Key)
 		if err != nil {
 			receivers = nil
 			return nil, err
 		}
+		var key [chacha20poly1305.KeySize]byte
+		copy(key[:], pubkey)
+		receivers[index] = key
 	}
 
 	headerPackets := make([]headers.HeaderPacket, 0)
@@ -239,6 +240,14 @@ func (b *c4ghTransitBackend) pathFilesRead(
 			HeaderEncryptionMethod: headers.X25519ChaCha20IETFPoly1305,
 			EncryptedHeaderPacket:  encHeaderPacket,
 		})
+		if dataEditList != nil {
+			headerPackets = append(headerPackets, headers.HeaderPacket{
+				WriterPrivateKey:       privateKey,
+				ReaderPublicKey:        readerPublicKey,
+				HeaderEncryptionMethod: headers.X25519ChaCha20IETFPoly1305,
+				EncryptedHeaderPacket:  dataEditList,
+			})
+		}
 	}
 
 	var magicNumber [8]byte
@@ -255,13 +264,9 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	if err != nil {
 		return nil, err
 	}
-
-	newEncodedHeader := make([]byte, base64.StdEncoding.EncodedLen(len(newBinaryHeader)))
-	base64.StdEncoding.Encode(newEncodedHeader, newBinaryHeader)
-
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"header":     newEncodedHeader,
+			"header":     base64.StdEncoding.EncodeToString(newBinaryHeader),
 			"keyversion": p.LatestVersion,
 		},
 	}, nil
@@ -291,13 +296,16 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	fmt.Println("Fetching key")
 	key, err := p.GetKey(nil, p.LatestVersion, p.KeySize)
 	if err != nil {
 		return nil, err
 	}
-	var privkey [32]byte
+	var edPrivkeyBytes [chacha20poly1305.KeySize * 2]byte
+	var privkey [chacha20poly1305.KeySize]byte
+	copy(edPrivkeyBytes[:], key)
 	keys.PrivateKeyToCurve25519(&privkey, key)
 
 	fmt.Println("Decoding base64 header")
@@ -321,19 +329,28 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 		return nil, err
 	}
 
-	if header_parsed != nil {
+	if header_parsed == nil {
 		return logical.ErrorResponse("Could not decrypt header with the latest private key."), nil
 	}
 
-	t := time.Now()
-	created, err := fmt.Println(t.String())
+	dataEncryptionParametersHeaderPackets, err := header_parsed.GetDataEncryptionParameterHeaderPackets()
+	if err != nil {
+		return nil, err
+	}
+
+	firstDataEncryptionParametersHeader := (*dataEncryptionParametersHeaderPackets)[0]
+	for _, dataEncryptionParametersHeader := range *dataEncryptionParametersHeaderPackets {
+		if dataEncryptionParametersHeader.GetPacketType() != firstDataEncryptionParametersHeader.GetPacketType() {
+			return logical.ErrorResponse("different data encryption methods are not supported"), nil
+		}
+	}
 
 	// Header was successfully decrypted, add it to the database
 	filePath := fmt.Sprintf("files/%s/%s", project, name)
 	entry, err := logical.StorageEntryJSON(filePath, map[string]interface{}{
 		"header":     header, // header stored in base64 format
 		"keyversion": p.LatestVersion,
-		"added":      created,
+		"added":      time.Now(),
 	})
 
 	if err != nil {
