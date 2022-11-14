@@ -21,21 +21,26 @@ type reencryptFileEntry struct {
 	Added      time.Time `json:"added" struct:"added" mapstructure:"added"`
 }
 
-// pathKeys extends the Vault API with a "/keys"
-// endpoint.
+// pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
+// Note that we're using our own regex for object name, since the framework.GenericNameRegex is too strict.
+// This may or may not be against Vault SDK programming guidelines.
 func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("name"),
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/(?P<file>\\w((.+)?\\w)?)",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "Project that the header is uploaded for",
 				Required:    true,
 			},
-			"name": {
+			"container": {
 				Type:        framework.TypeString,
-				Description: "Name of the file the uploaded header belongs to",
+				Description: "Container or bucket that the file belongs to",
 				Required:    true,
+			},
+			"file": {
+				Type:        framework.TypeString,
+				Description: "Full object path of the file the uploaded header belongs to",
 			},
 			"header": {
 				Type:        framework.TypeString,
@@ -62,8 +67,8 @@ func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 	}
 }
 
-// List stored file headers
-func (b *c4ghTransitBackend) pathListFiles() *framework.Path {
+// List stored file containers
+func (b *c4ghTransitBackend) pathListContainers() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -75,22 +80,49 @@ func (b *c4ghTransitBackend) pathListFiles() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback: b.pathFilesList,
+				Callback: b.pathContainersList,
 			},
 		},
-		HelpSynopsis:    pathFilesHelpSynopsis,
-		HelpDescription: pathFilesHelpDescription,
+		HelpSynopsis:    pathContainerListHelpSynopsis,
+		HelpDescription: pathContainerListHelpDescription,
 	}
 }
 
-// List all headers uploaded to a specific project
-func (b *c4ghTransitBackend) pathFilesList(
+// List containers
+func (b *c4ghTransitBackend) pathListFiles() *framework.Path {
+	return &framework.Path{
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/?$",
+		Fields: map[string]*framework.FieldSchema{
+			"project": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that the header is uploaded for",
+				Required:    true,
+			},
+			"container": {
+				Type:        framework.TypeString,
+				Description: "Container / bucket the header belongs in",
+				Required:    true,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathFilesList,
+			},
+		},
+		HelpSynopsis:    pathFilesListHelpSynopsis,
+		HelpDescription: pathFilesListHelpDescription,
+	}
+}
+
+func (b *c4ghTransitBackend) pathContainersList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
+
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
 	listPath := fmt.Sprintf("files/%s/", project)
+
 	entries, err := req.Storage.List(ctx, listPath)
 
 	if err != nil {
@@ -100,6 +132,33 @@ func (b *c4ghTransitBackend) pathFilesList(
 	return logical.ListResponse(entries), nil
 }
 
+// List all headers uploaded to a specific project
+func (b *c4ghTransitBackend) pathFilesList(
+	ctx context.Context,
+	req *logical.Request,
+	d *framework.FieldData,
+) (*logical.Response, error) {
+	project := d.Get("project").(string)
+	container := d.Get("container").(string)
+	listPath := fmt.Sprintf("files/%s/%s/", project, container)
+	entries, err := req.Storage.List(ctx, listPath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	decodedEntries := make([]string, len(entries), len(entries))
+	for i, entry := range entries {
+		key, err := base64.StdEncoding.DecodeString(entry)
+		if err != nil {
+			return nil, err
+		}
+		decodedEntries[i] = string(key)
+	}
+
+	return logical.ListResponse(decodedEntries), nil
+}
+
 // Read a re-encrypted header
 func (b *c4ghTransitBackend) pathFilesRead(
 	ctx context.Context,
@@ -107,10 +166,12 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	d *framework.FieldData,
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
-	name := d.Get("name").(string)
+	container := d.Get("container").(string)
+	file := d.Get("file").(string)
+	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
 	// Open the old header
-	filePath := fmt.Sprintf("files/%s/%s", project, name)
+	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
 	entry, err := req.Storage.Get(ctx, filePath)
 	if err != nil {
 		return nil, err
@@ -279,8 +340,11 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	d *framework.FieldData,
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
-	name := d.Get("name").(string)
+	container := d.Get("container").(string)
+	file := d.Get("file").(string)
 	header := d.Get("header").(string)
+
+	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -346,7 +410,7 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	}
 
 	// Header was successfully decrypted, add it to the database
-	filePath := fmt.Sprintf("files/%s/%s", project, name)
+	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
 	entry, err := logical.StorageEntryJSON(filePath, map[string]interface{}{
 		"header":     header, // header stored in base64 format
 		"keyversion": p.LatestVersion,
@@ -379,8 +443,10 @@ func (b *c4ghTransitBackend) pathFilesDelete(
 	d *framework.FieldData,
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
-	name := d.Get("name").(string)
-	headerPath := fmt.Sprintf("files/%s/%s", project, name)
+	container := d.Get("container").(string)
+	file := d.Get("name").(string)
+	file64 := base64.StdEncoding.EncodeToString([]byte(file))
+	headerPath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
 
 	err := req.Storage.Delete(ctx, headerPath)
 
@@ -398,6 +464,8 @@ This path allows you to add file headers that are encrypted with a public key kn
 to this transit service. These headers can then be downloaded re-encrypted
 with a whitelisted key, or deleted permanently using this path.
 `
-	pathFilesListHelpSynopsis    = `List the uploaded headers for a specific project`
-	pathFilesListHelpDescription = `File header listing order is not specified`
+	pathFilesListHelpSynopsis        = `List the uploaded headers for a specific project in a specific container / bucket`
+	pathFilesListHelpDescription     = `File header listing order is not specified`
+	pathContainerListHelpSynopsis    = `List the containers / buckets into which headers have been uploaded`
+	pathContainerListHelpDescription = `Listing order is not specified`
 )
