@@ -62,6 +62,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*c4ghTransitBack
 			b.pathWhitelistList(),
 			b.pathFiles(),
 			b.pathListFiles(),
+			b.pathListContainers(),
 			b.pathImport(),
 			b.pathBackup(),
 			b.pathRestore(),
