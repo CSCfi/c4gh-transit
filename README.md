@@ -6,12 +6,6 @@ download access by public key, automatic key generation for crypt4gh keys
 along with some other changes related to the file type. Plugin tries to re-use
 as much of the original plugin code as possible.
 
-## Forking
-Note that this repository contains code licensed under MPL-2.0, while code
-written fully by **CSC – IT Center for Science** is typically licensed under
-the MIT license. Sections licensed under MPL-2.0 have been separately flagged
-in the source code, other parts are MIT licensed.
-
 ## Usage
 To develop, local installation of `Vault` is required.
 
@@ -21,6 +15,8 @@ mkdir -p vault
 mkdir -p vault/plugins
 go build -v -o vault/plugins/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
 ```
+
+Install vault: https://developer.hashicorp.com/vault/docs/install#precompiled-binaries
 
 Then run a development server with the plugin
 ```bash
@@ -37,3 +33,10 @@ After this, you can e.g. create a new key with
 ```bash
 vault write c4ghtransit/keys/test-user
 ```
+
+## Licensing
+
+`c4gh-transit` is licensed under MIT license. 
+Several sections that are licensed under MRL-2.0 have been flagged in the source code.
+
+`SPDX-License-Identifier: MIT AND MPL-2.0`
