@@ -147,7 +147,7 @@ func (b *c4ghTransitBackend) pathFilesList(
 		return nil, err
 	}
 
-	decodedEntries := make([]string, len(entries), len(entries))
+	decodedEntries := make([]string, len(entries))
 	for i, entry := range entries {
 		key, err := base64.StdEncoding.DecodeString(entry)
 		if err != nil {
@@ -269,18 +269,15 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	for index, element := range keylist {
 		entry, err := req.Storage.Get(ctx, "whitelist/"+project+"/"+element)
 		if err != nil {
-			receivers = nil
 			return nil, err
 		}
 
 		if err := entry.DecodeJSON(&keyEntry); err != nil {
-			receivers = nil
 			return nil, err
 		}
 
 		pubkey, err := base64.StdEncoding.DecodeString(keyEntry.Key)
 		if err != nil {
-			receivers = nil
 			return nil, err
 		}
 		var key [chacha20poly1305.KeySize]byte
