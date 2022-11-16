@@ -122,6 +122,7 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 
 func (b *c4ghTransitBackend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, rand io.Reader) (retP *keysutil.Policy, retUpserted bool, retErr error) {
 	b.configMutex.RLock()
+	//nolint:nestif
 	if b.lm.GetUseCache() && b.cacheSizeChanged {
 		var err error
 		currentCacheSize := b.lm.GetCacheSize()

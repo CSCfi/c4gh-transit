@@ -11,7 +11,6 @@ To develop, local installation of `Vault` is required.
 
 First build the module:
 ```bash
-mkdir -p vault
 mkdir -p vault/plugins
 go build -v -o vault/plugins/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
 ```
@@ -25,6 +24,7 @@ VAULT_LOG_LEVEL=DEBUG vault server -dev -dev-plugin-dir=vault/plugins -dev-root-
 
 Login to dev server, and enable the plugin
 ```bash
+export VAULT_ADDR='http://127.0.0.1:8200'
 vault login
 vault secrets enable c4ghtransit
 ```

@@ -13,6 +13,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const ed25519 = "ed25519"
+const crypt4gh = "crypt4gh"
+
 func (b *c4ghTransitBackend) pathImport() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/import",
@@ -23,7 +26,7 @@ func (b *c4ghTransitBackend) pathImport() *framework.Path {
 			},
 			"flavor": {
 				Type:        framework.TypeString,
-				Default:     "ed25519",
+				Default:     ed25519,
 				Description: `The type of key being imported. "crypt4gh" and "ed25519" are supported. Defaults to "ed25519".`,
 			},
 			"kdfname": {
@@ -89,9 +92,9 @@ func (b *c4ghTransitBackend) pathImportWrite(ctx context.Context, req *logical.R
 	}
 
 	switch strings.ToLower(flavor) {
-	case "ed25519":
+	case ed25519:
 		polReq.KeyType = keysutil.KeyType_ED25519
-	case "crypt4gh":
+	case crypt4gh:
 		// Using ed25519 as internal key type for crypt4gh
 		// converting between the two with an internal convenience function
 		polReq.KeyType = keysutil.KeyType_ED25519
@@ -117,7 +120,7 @@ func (b *c4ghTransitBackend) pathImportWrite(ctx context.Context, req *logical.R
 	}
 
 	switch strings.ToLower(flavor) {
-	case "ed25519":
+	case ed25519:
 		err = b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
 		if err != nil {
 			return nil, err
