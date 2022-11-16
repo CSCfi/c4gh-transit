@@ -16,6 +16,8 @@ mkdir -p vault/plugins
 go build -v -o vault/plugins/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
+Install vault: https://developer.hashicorp.com/vault/docs/install#precompiled-binaries
+
 Then run a development server with the plugin
 ```bash
 VAULT_LOG_LEVEL=DEBUG vault server -dev -dev-plugin-dir=vault/plugins -dev-root-token-id="devroot"
