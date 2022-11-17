@@ -22,11 +22,9 @@ type reencryptFileEntry struct {
 }
 
 // pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
-// Note that we're using our own regex for object name, since the framework.GenericNameRegex is too strict.
-// This may or may not be against Vault SDK programming guidelines.
 func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/(?P<file>\\w((.+)?\\w)?)",
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + framework.MatchAllRegex("file"),
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -41,6 +39,7 @@ func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 			"file": {
 				Type:        framework.TypeString,
 				Description: "Full object path of the file the uploaded header belongs to",
+				Required:    true,
 			},
 			"header": {
 				Type:        framework.TypeString,
