@@ -29,7 +29,7 @@ func main() {
 
 	println("Starting to serve the c4ghtransit plugin.\n")
 
-	if err := plugin.Serve(&plugin.ServeOpts{
+	if err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: c4ghtransit.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
