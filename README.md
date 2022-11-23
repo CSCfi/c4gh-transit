@@ -34,6 +34,17 @@ After this, you can e.g. create a new key with
 vault write c4ghtransit/keys/test-user
 ```
 
+## Docs
+Vault provides API docs generated in the OpenAPI format. You can access it by opening 
+`http://localhost:8200/ui/vault/api-explorer?filter=c4ghtransit` in the browser, and
+login with the token `devroot`.
+
+It's also available as a JSON file from `http://127.0.0.1:8200/v1/c4ghtransit?help=1`
+
+    $ curl -sL \
+    -H "X-Vault-Token: devroot" \
+    http://127.0.0.1:8200/v1/c4ghtransit?help=1 | jq
+
 ## Licensing
 
 `c4gh-transit` is licensed under MIT license. 
