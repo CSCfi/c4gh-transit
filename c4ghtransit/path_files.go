@@ -440,7 +440,7 @@ func (b *c4ghTransitBackend) pathFilesDelete(
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
 	container := d.Get("container").(string)
-	file := d.Get("name").(string)
+	file := d.Get("file").(string)
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 	headerPath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
 
