@@ -24,7 +24,7 @@ type reencryptFileEntry struct {
 // pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
 func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + framework.MatchAllRegex("file"),
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
