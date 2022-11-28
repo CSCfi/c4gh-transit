@@ -223,34 +223,6 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	copy(edPrivkeyBytes[:], pkey)
 	keys.PrivateKeyToCurve25519(&privkey, pkey)
 
-	buffer := bytes.NewBuffer(binaryHeader)
-	header, err := headers.NewHeader(buffer, privkey)
-	if err != nil {
-		return nil, err
-	}
-
-	dataEncryptionParametersHeaderPackets, err := header.GetDataEncryptionParameterHeaderPackets()
-	if err != nil {
-		return nil, err
-	}
-	dataEditList := header.GetDataEditListHeaderPacket()
-
-	firstDataEncryptionParametersHeader := (*dataEncryptionParametersHeaderPackets)[0]
-	for _, dataEncryptionParametersHeader := range *dataEncryptionParametersHeaderPackets {
-		if dataEncryptionParametersHeader.GetPacketType() != firstDataEncryptionParametersHeader.GetPacketType() {
-			return logical.ErrorResponse("different data encryption methods are not supported"), nil
-		}
-	}
-	encryptedSegmentSize := firstDataEncryptionParametersHeader.EncryptedSegmentSize
-
-	// Create the new encrypted header packet
-	encHeaderPacket := headers.DataEncryptionParametersHeaderPacket{
-		EncryptedSegmentSize: encryptedSegmentSize,
-		PacketType:           headers.PacketType{PacketType: headers.DataEncryptionParameters},
-		DataEncryptionMethod: headers.ChaCha20IETFPoly1305,
-		DataKey:              firstDataEncryptionParametersHeader.DataKey,
-	}
-
 	// Get the allowed receivers from whitelist
 	listPath := fmt.Sprintf("whitelist/%s/", project)
 	keylist, err := req.Storage.List(ctx, listPath)
@@ -284,43 +256,11 @@ func (b *c4ghTransitBackend) pathFilesRead(
 		receivers[index] = key
 	}
 
-	headerPackets := make([]headers.HeaderPacket, 0)
-
-	_, privateKey, err := keys.GenerateKeyPair()
+	newBinaryHeader, err := headers.ReEncryptHeader(binaryHeader, privkey, receivers)
 	if err != nil {
 		return nil, err
 	}
-	for _, readerPublicKey := range receivers {
-		headerPackets = append(headerPackets, headers.HeaderPacket{
-			WriterPrivateKey:       privateKey,
-			ReaderPublicKey:        readerPublicKey,
-			HeaderEncryptionMethod: headers.X25519ChaCha20IETFPoly1305,
-			EncryptedHeaderPacket:  encHeaderPacket,
-		})
-		if dataEditList != nil {
-			headerPackets = append(headerPackets, headers.HeaderPacket{
-				WriterPrivateKey:       privateKey,
-				ReaderPublicKey:        readerPublicKey,
-				HeaderEncryptionMethod: headers.X25519ChaCha20IETFPoly1305,
-				EncryptedHeaderPacket:  dataEditList,
-			})
-		}
-	}
 
-	var magicNumber [8]byte
-	copy(magicNumber[:], headers.MagicNumber)
-
-	newHeader := headers.Header{
-		MagicNumber:       magicNumber,
-		Version:           headers.Version,
-		HeaderPacketCount: uint32(len(headerPackets)),
-		HeaderPackets:     headerPackets,
-	}
-
-	newBinaryHeader, err := newHeader.MarshalBinary()
-	if err != nil {
-		return nil, err
-	}
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"header":     base64.StdEncoding.EncodeToString(newBinaryHeader),
