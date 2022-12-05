@@ -8,8 +8,8 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.8.2
 	github.com/hashicorp/vault/sdk v0.6.1
-	github.com/neicnordic/crypt4gh v1.6.0
-	golang.org/x/crypto v0.2.0
+	github.com/neicnordic/crypt4gh v1.6.1
+	golang.org/x/crypto v0.3.0
 )
 
 require (
@@ -49,6 +49,7 @@ require (
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
