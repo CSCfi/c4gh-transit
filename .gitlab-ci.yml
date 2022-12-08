@@ -1,0 +1,10 @@
+stages:
+  - test
+
+test:
+  stage: test
+  tags:
+    - sds
+  script:
+    - GO_BIN=$(which go)
+    - sudo ${GO_BIN} test -v ./c4ghtransit

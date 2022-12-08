@@ -34,6 +34,11 @@ After this, you can e.g. create a new key with
 vault write c4ghtransit/keys/test-user
 ```
 
+## Tests
+There are only acceptance tests, which run in Docker. They can be run with
+
+    go test -v ./c4ghtransit
+
 ## Docs
 Vault provides API docs generated in the OpenAPI format. You can access it by opening 
 `http://localhost:8200/ui/vault/api-explorer?filter=c4ghtransit` in the browser, and
