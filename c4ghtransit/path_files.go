@@ -46,6 +46,16 @@ func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 				Description: "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin",
 				Required:    true,
 			},
+			"service": {
+				Type:        framework.TypeNameString,
+				Description: "Service that requests the file, matches the whitelist service name",
+				Required:    true,
+			},
+			"key": {
+				Type:        framework.TypeNameString,
+				Description: "Name of whitelisted key the service wants to use",
+				Required:    true,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -165,6 +175,8 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	d *framework.FieldData,
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
+	service := d.Get("service").(string)
+	keyName := d.Get("key").(string)
 	container := d.Get("container").(string)
 	file := d.Get("file").(string)
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
@@ -223,40 +235,29 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	copy(edPrivkeyBytes[:], pkey)
 	keys.PrivateKeyToCurve25519(&privkey, pkey)
 
-	// Get the allowed receivers from whitelist
-	listPath := fmt.Sprintf("whitelist/%s/", project)
-	keylist, err := req.Storage.List(ctx, listPath)
+	// Get the allowed receivers' key from whitelist
+	listPath := fmt.Sprintf("whitelist/%s/%s/%s", project, service, keyName)
+	rawKeyEntry, err := req.Storage.Get(ctx, listPath)
 	if err != nil {
 		return nil, err
 	}
-	if keylist == nil {
-		return logical.ErrorResponse("no whitelisted keys were available"), nil
+	if rawKeyEntry == nil {
+		return logical.ErrorResponse("no whitelisted key found"), nil
 	}
-
-	arrln := len(keylist)
-	receivers := make([][chacha20poly1305.KeySize]byte, arrln)
 
 	var keyEntry transitWhitelistEntry
-	for index, element := range keylist {
-		entry, err := req.Storage.Get(ctx, "whitelist/"+project+"/"+element)
-		if err != nil {
-			return nil, err
-		}
-
-		if err := entry.DecodeJSON(&keyEntry); err != nil {
-			return nil, err
-		}
-
-		pubkey, err := base64.StdEncoding.DecodeString(keyEntry.Key)
-		if err != nil {
-			return nil, err
-		}
-		var key [chacha20poly1305.KeySize]byte
-		copy(key[:], pubkey)
-		receivers[index] = key
+	if err := rawKeyEntry.DecodeJSON(&keyEntry); err != nil {
+		return nil, err
 	}
 
-	newBinaryHeader, err := headers.ReEncryptHeader(binaryHeader, privkey, receivers)
+	pubkey, err := base64.StdEncoding.DecodeString(keyEntry.Key)
+	if err != nil {
+		return nil, err
+	}
+	var receiver [chacha20poly1305.KeySize]byte
+	copy(receiver[:], pubkey)
+
+	newBinaryHeader, err := headers.ReEncryptHeader(binaryHeader, privkey, [][chacha20poly1305.KeySize]byte{receiver})
 	if err != nil {
 		return nil, err
 	}

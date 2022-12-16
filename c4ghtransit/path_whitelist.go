@@ -21,22 +21,29 @@ type transitWhitelistEntry struct {
 	Flavor  string `json:"flavor"`
 	Service string `json:"service"`
 	Project string `json:"project"`
+	Name    string `json:"name"`
 }
 
 // pathWhitelist extends the Vault API with a "/whitelist"
 // endpoint for adding whitelisted public keys for transit.
 func (b *c4ghTransitBackend) pathWhitelist() *framework.Path {
 	return &framework.Path{
-		Pattern: "whitelist/" + framework.GenericNameRegex("name") + "/" + framework.GenericNameRegex("service"),
+		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("service") + "/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			"project": {
 				Type:        framework.TypeLowerCaseString,
-				Description: "Name of the whitelisted key",
+				Description: "Project whitelisted key has access to",
 				Required:    true,
 			},
 			"service": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeNameString,
 				Description: "Identifier or name for the whitelisted service or user",
+				Required:    true,
+			},
+			"name": {
+				Type:        framework.TypeNameString,
+				Description: "Name of the whitelisted key",
+				Required:    true,
 			},
 			"flavor": {
 				Type:        framework.TypeString,
@@ -74,7 +81,7 @@ func (b *c4ghTransitBackend) pathWhitelistList() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
-				Description: "Project that the header is uploaded for",
+				Description: "Project that the key is uploaded for",
 				Required:    true,
 			},
 		},
@@ -110,9 +117,10 @@ func (b *c4ghTransitBackend) pathWhitelistRead(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	name := d.Get("name").(string)
+	project := d.Get("project").(string)
 	service := d.Get("service").(string)
-	entry, err := req.Storage.Get(ctx, "whitelist/"+name+"/"+service)
+	name := d.Get("name").(string)
+	entry, err := req.Storage.Get(ctx, "whitelist/"+project+"/"+service+"/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +139,7 @@ func (b *c4ghTransitBackend) pathWhitelistRead(
 			"flavor":  result.Flavor,
 			"service": result.Service,
 			"project": result.Project,
+			"name":    result.Name,
 		},
 	}, nil
 }
@@ -141,10 +150,11 @@ func (b *c4ghTransitBackend) pathWhitelistWrite(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	name := d.Get("name").(string)
+	project := d.Get("project").(string)
 	pubkey := d.Get("pubkey").(string)
 	flavor := d.Get("flavor").(string)
 	service := d.Get("service").(string)
+	name := d.Get("name").(string)
 
 	if pubkey == "" {
 		return logical.ErrorResponse("Missing public key"), nil
@@ -152,6 +162,10 @@ func (b *c4ghTransitBackend) pathWhitelistWrite(
 
 	if service == "" {
 		return logical.ErrorResponse("Service that owns the key needs to be specified."), nil
+	}
+
+	if project == "" {
+		return logical.ErrorResponse("A project for the key needs to be specified."), nil
 	}
 
 	var formattedKey string
@@ -174,13 +188,14 @@ func (b *c4ghTransitBackend) pathWhitelistWrite(
 		return logical.ErrorResponse("Key flavor not supported."), nil
 	}
 
-	keyPath := fmt.Sprintf("whitelist/%s/%s", name, service)
+	keyPath := fmt.Sprintf("whitelist/%s/%s/%s", project, service, name)
 
 	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
 		"key":     formattedKey,
 		"flavor":  "crypt4gh",
+		"project": project,
 		"service": service,
-		"project": name,
+		"name":    name,
 	})
 
 	if err != nil {
@@ -198,9 +213,10 @@ func (b *c4ghTransitBackend) pathWhitelistDelete(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	name := d.Get("name").(string)
+	project := d.Get("project").(string)
 	service := d.Get("service").(string)
-	keyPath := fmt.Sprintf("whitelist/%s/%s", name, service)
+	name := d.Get("name").(string)
+	keyPath := fmt.Sprintf("whitelist/%s/%s/%s", project, service, name)
 
 	err := req.Storage.Delete(ctx, keyPath)
 	if err != nil {

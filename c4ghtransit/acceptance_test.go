@@ -48,6 +48,7 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 
 	project := "my-project"
 	service := "fake-service"
+	keyName := "fake-key-name"
 	container := "bucket"
 	path := "hidden-in-a-bucket.txt.c4gh"
 
@@ -63,13 +64,13 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 			// Get the project key
 			testC4ghStepwiseReadKey(t, project),
 			// Add locally created pub key to the whitelist
-			testC4ghStepwiseWriteWhitelist(t, project, service, publicKeyString),
+			testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString),
 			// Confirm key exists
-			testC4ghStepwiseReadWhitelist(t, project, service, publicKeyString),
+			testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString),
 			// Upload encrypt file
 			testC4ghStepwiseWriteFile(t, project, container, path),
 			// Download encrypted file, and confirm it can be decrypted
-			testC4ghStepwiseReadFile(t, project, container, path, privateKey),
+			testC4ghStepwiseReadFile(t, project, container, path, privateKey, service, keyName),
 		},
 	}
 	stepwise.Run(t, simpleCase)
@@ -115,24 +116,25 @@ func testC4ghStepwiseReadKey(t *testing.T, project string) stepwise.Step {
 	}
 }
 
-func testC4ghStepwiseWriteWhitelist(_ *testing.T, project string, service string, publicKey string) stepwise.Step {
+func testC4ghStepwiseWriteWhitelist(_ *testing.T, project string, service string, keyName string, publicKey string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteWhitelist",
 		Operation: stepwise.WriteOperation,
 		Data:      map[string]interface{}{"flavor": "crypt4gh", "pubkey": publicKey},
-		Path:      fmt.Sprintf("/whitelist/%s/%s", project, service),
+		Path:      fmt.Sprintf("/whitelist/%s/%s/%s", project, service, keyName),
 	}
 }
 
-func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string, publicKey string) stepwise.Step {
+func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string, keyName string, publicKey string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadWhitelist",
 		Operation: stepwise.ReadOperation,
-		Path:      fmt.Sprintf("/whitelist/%s/%s", project, service),
+		Path:      fmt.Sprintf("/whitelist/%s/%s/%s", project, service, keyName),
 		Assert: func(resp *api.Secret, err error) error {
 			assert.Equal(t, resp.Data["key"], publicKey, fmt.Sprintf("Response did not contain expected key: %s", resp.Data))
 			assert.Equal(t, resp.Data["project"], project, fmt.Sprintf("Response did not contain expected project: %s", resp.Data))
 			assert.Equal(t, resp.Data["service"], service, fmt.Sprintf("Response did not contain expected service: %s", resp.Data))
+			assert.Equal(t, resp.Data["name"], keyName, fmt.Sprintf("Response did not contain expected key name: %s", resp.Data))
 			if err != nil {
 				return err
 			}
@@ -159,11 +161,15 @@ func testC4ghStepwiseWriteFile(_ *testing.T, project string, container string, p
 	}
 }
 
-func testC4ghStepwiseReadFile(t *testing.T, project string, container string, path string, privateKey [chacha20poly1305.KeySize]byte) stepwise.Step {
+func testC4ghStepwiseReadFile(t *testing.T, project string, container string, path string, privateKey [chacha20poly1305.KeySize]byte, service string, keyName string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadFile",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
+		ReadData: map[string][]string{
+			"service": {service},
+			"key":     {keyName},
+		},
 		Assert: func(resp *api.Secret, err error) error {
 			if err != nil {
 				return err

@@ -21,6 +21,7 @@ type transitWhitelistEntrySansProject struct {
 	Key     string `json:"key"`
 	Flavor  string `json:"flavor"`
 	Service string `json:"service"`
+	Name    string `json:"name"`
 }
 
 func (b *c4ghTransitBackend) pathBackup() *framework.Path {

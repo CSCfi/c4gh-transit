@@ -3,7 +3,7 @@ module github.com/cscfi/c4gh-transit/c4ghtransit
 go 1.17
 
 require (
-	github.com/CSCfi/vault-testing-stepwise v0.2.0
+	github.com/CSCfi/vault-testing-stepwise v0.3.0
 	github.com/fatih/structs v1.1.0
 	github.com/hashicorp/go-hclog v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
