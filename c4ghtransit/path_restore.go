@@ -5,11 +5,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -105,8 +107,32 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 	name = fileData.Name
 	resp := &logical.Response{}
 
-	if err = b.lm.RestorePolicy(ctx, storage, name, fileData.Key, force); err != nil {
-		return nil, fmt.Errorf("Could not restore encryption key: %w", err)
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
+		Storage: storage,
+		Name:    name,
+	}, b.GetRandomReader())
+
+	skipKey := false
+	if err == nil && p != nil && !force {
+		keyBytes, err := base64.StdEncoding.DecodeString(fileData.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		var keyData keysutil.KeyData
+		if err = jsonutil.DecodeJSON(keyBytes, &keyData); err != nil {
+			return nil, err
+		}
+
+		if reflect.DeepEqual(p.Keys, keyData.Policy.Keys) {
+			skipKey = true
+		}
+	}
+
+	if !skipKey {
+		if err = b.lm.RestorePolicy(ctx, storage, name, fileData.Key, force); err != nil {
+			return nil, fmt.Errorf("Could not restore encryption key: %w", err)
+		}
 	}
 
 	for container, files := range fileData.Files {
