@@ -26,7 +26,7 @@ var (
 	content       = "Hide your secrets in a bucket."
 )
 
-func TestKeys(t *testing.T) {
+func TestHeaderWhitelistDecryption(t *testing.T) {
 	err := os.Setenv("VAULT_ACC", "1")
 	if err != nil {
 		t.Error("Failed to set VAULT_ACC")
@@ -37,7 +37,7 @@ func TestKeys(t *testing.T) {
 		PluginType:      stepwise.PluginTypeSecrets,
 		PluginName:      "c4ghtransit",
 	}
-	env := docker.NewEnvironment("DockerKeys", &mountOptions)
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -48,6 +48,7 @@ func TestKeys(t *testing.T) {
 
 	project := "my-project"
 	service := "fake-service"
+	keyName := "fake-key-name"
 	container := "bucket"
 	path := "hidden-in-a-bucket.txt.c4gh"
 
@@ -63,13 +64,13 @@ func TestKeys(t *testing.T) {
 			// Get the project key
 			testC4ghStepwiseReadKey(t, project),
 			// Add locally created pub key to the whitelist
-			testC4ghStepwiseWriteWhitelist(t, project, service, publicKeyString),
+			testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString),
 			// Confirm key exists
-			testC4ghStepwiseReadWhitelist(t, project, service, publicKeyString),
+			testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString),
 			// Upload encrypt file
 			testC4ghStepwiseWriteFile(t, project, container, path),
 			// Download encrypted file, and confirm it can be decrypted
-			testC4ghStepwiseReadFile(t, project, container, path, privateKey),
+			testC4ghStepwiseReadFile(t, project, container, path, privateKey, service, keyName),
 		},
 	}
 	stepwise.Run(t, simpleCase)
@@ -115,24 +116,25 @@ func testC4ghStepwiseReadKey(t *testing.T, project string) stepwise.Step {
 	}
 }
 
-func testC4ghStepwiseWriteWhitelist(_ *testing.T, project string, service string, publicKey string) stepwise.Step {
+func testC4ghStepwiseWriteWhitelist(_ *testing.T, project string, service string, keyName string, publicKey string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteWhitelist",
 		Operation: stepwise.WriteOperation,
 		Data:      map[string]interface{}{"flavor": "crypt4gh", "pubkey": publicKey},
-		Path:      fmt.Sprintf("/whitelist/%s/%s", project, service),
+		Path:      fmt.Sprintf("/whitelist/%s/%s/%s", project, service, keyName),
 	}
 }
 
-func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string, publicKey string) stepwise.Step {
+func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string, keyName string, publicKey string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadWhitelist",
 		Operation: stepwise.ReadOperation,
-		Path:      fmt.Sprintf("/whitelist/%s/%s", project, service),
+		Path:      fmt.Sprintf("/whitelist/%s/%s/%s", project, service, keyName),
 		Assert: func(resp *api.Secret, err error) error {
 			assert.Equal(t, resp.Data["key"], publicKey, fmt.Sprintf("Response did not contain expected key: %s", resp.Data))
 			assert.Equal(t, resp.Data["project"], project, fmt.Sprintf("Response did not contain expected project: %s", resp.Data))
 			assert.Equal(t, resp.Data["service"], service, fmt.Sprintf("Response did not contain expected service: %s", resp.Data))
+			assert.Equal(t, resp.Data["name"], keyName, fmt.Sprintf("Response did not contain expected key name: %s", resp.Data))
 			if err != nil {
 				return err
 			}
@@ -147,50 +149,31 @@ func testC4ghStepwiseWriteFile(_ *testing.T, project string, container string, p
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
 		GetData: func() (map[string]interface{}, error) {
-			var keyBytes [chacha20poly1305.KeySize]byte
-			decKey, _ := base64.StdEncoding.DecodeString(projectKey)
-			copy(keyBytes[:], decKey)
-			writeBuffer := new(bytes.Buffer)
-			crypt4GHWriter, err := streaming.NewCrypt4GHWriterWithoutPrivateKey(writeBuffer, [][chacha20poly1305.KeySize]byte{keyBytes}, nil)
-			if err != nil {
-				fmt.Println("Failed to create crypt4GHWriter: ", err)
 
+			encryptedHeader, encryptedBody, err := encryptFile(projectKey, []byte(content))
+			if err != nil {
+				fmt.Println("Failed encrypting file: ", err)
 				return nil, err
 			}
-			_, err = io.Copy(crypt4GHWriter, bytes.NewReader([]byte(content)))
-			if err != nil {
-				fmt.Println("Failed to write c4gh: ", err)
-
-				return nil, err
-			}
-			err = crypt4GHWriter.Close()
-			if err != nil {
-				fmt.Println("Failed to close c4gh: ", err)
-
-				return nil, err
-
-			}
-			encryptedFile = writeBuffer.Bytes()
-			encryptedHeader, err := headers.ReadHeader(bytes.NewReader(encryptedFile))
-			if err != nil {
-				fmt.Println("Failed reading header: ", err)
-
-				return nil, err
-			}
-			encryptedFile = encryptedFile[len(encryptedHeader):]
-
+			encryptedFile = encryptedBody
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
 	}
 }
 
-func testC4ghStepwiseReadFile(t *testing.T, project string, container string, path string, privateKey [chacha20poly1305.KeySize]byte) stepwise.Step {
+func testC4ghStepwiseReadFile(t *testing.T, project string, container string, path string, privateKey [chacha20poly1305.KeySize]byte, service string, keyName string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadFile",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
+		ReadData: map[string][]string{
+			"service": {service},
+			"key":     {keyName},
+		},
 		Assert: func(resp *api.Secret, err error) error {
-
+			if err != nil {
+				return err
+			}
 			var data struct {
 				Header     string `mapstructure:"header"`
 				KeyVersion int    `mapstructure:"keyversion"`
@@ -199,32 +182,83 @@ func testC4ghStepwiseReadFile(t *testing.T, project string, container string, pa
 				fmt.Println("failed decoding to mapstructure")
 				return err
 			}
-			decodedHeader, err := base64.StdEncoding.DecodeString(data.Header)
-			if err != nil {
-				fmt.Println("Error decoding header: ", data.Header, err)
-
-				return err
-			}
-			file := append(decodedHeader, encryptedFile...)
-			crypt4GHReader, err := streaming.NewCrypt4GHReader(bytes.NewReader(file), privateKey, nil)
-			if err != nil {
-				fmt.Println("Error reading file: ", err)
-
-				return err
-			}
-			var decryptedBuffer = new(bytes.Buffer)
-			_, err = io.Copy(decryptedBuffer, crypt4GHReader)
+			decryptedFile, err := decryptFile(data.Header, encryptedFile, privateKey)
 			if err != nil {
 				fmt.Println("Error decrypting file: ", err)
 
 				return err
 			}
-			var decryptedFile = decryptedBuffer.Bytes()
 			var decryptedFileString = string(decryptedFile)
-
 			assert.Equal(t, decryptedFileString, content, "Decrypted file and original content don't match")
 
-			return err
+			return nil
 		},
 	}
+}
+
+// encryptFile takes as input a receiver public key, and a file as an array of bytes.
+// it returns the encrypted header, and encrypted body or error if it failed
+func encryptFile(projectKey string, file []byte) ([]byte, []byte, error) {
+	var keyBytes [chacha20poly1305.KeySize]byte
+	decKey, _ := base64.StdEncoding.DecodeString(projectKey)
+	copy(keyBytes[:], decKey)
+	writeBuffer := new(bytes.Buffer)
+	crypt4GHWriter, err := streaming.NewCrypt4GHWriterWithoutPrivateKey(writeBuffer, [][chacha20poly1305.KeySize]byte{keyBytes}, nil)
+	if err != nil {
+		fmt.Println("Failed to create crypt4GHWriter: ", err)
+
+		return nil, nil, err
+	}
+	_, err = io.Copy(crypt4GHWriter, bytes.NewReader(file))
+	if err != nil {
+		fmt.Println("Failed to write c4gh: ", err)
+
+		return nil, nil, err
+	}
+	err = crypt4GHWriter.Close()
+	if err != nil {
+		fmt.Println("Failed to close c4gh: ", err)
+
+		return nil, nil, err
+	}
+	encryptedBody := writeBuffer.Bytes()
+	encryptedHeader, err := headers.ReadHeader(bytes.NewReader(encryptedBody))
+	if err != nil {
+		fmt.Println("Failed reading header: ", err)
+
+		return nil, nil, err
+	}
+	encryptedBody = encryptedBody[len(encryptedHeader):]
+
+	return encryptedHeader, encryptedBody, nil
+}
+
+// decryptFile takes as input a base64 encoded header string, the encrypted body as bytes, and a private key.
+// it returns the decrypted body or error if it failed
+func decryptFile(header string, encryptedBody []byte, privateKey [chacha20poly1305.KeySize]byte) ([]byte, error) {
+	decodedHeader, err := base64.StdEncoding.DecodeString(header)
+	if err != nil {
+		fmt.Println("Error decoding header: ", header, err)
+
+		return nil, err
+	}
+	var file []byte
+	file = append(file, decodedHeader...)
+	file = append(file, encryptedBody...)
+	crypt4GHReader, err := streaming.NewCrypt4GHReader(bytes.NewReader(file), privateKey, nil)
+	if err != nil {
+		fmt.Println("Error reading file: ", err)
+
+		return nil, err
+	}
+	var decryptedBuffer = new(bytes.Buffer)
+	_, err = io.Copy(decryptedBuffer, crypt4GHReader)
+	if err != nil {
+		fmt.Println("Error decrypting file: ", err)
+
+		return nil, err
+	}
+	var decryptedFile = decryptedBuffer.Bytes()
+
+	return decryptedFile, nil
 }

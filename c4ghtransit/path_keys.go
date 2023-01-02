@@ -19,11 +19,11 @@ import (
 // endpoint.
 func (b *c4ghTransitBackend) pathKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/" + framework.GenericNameRegex("name"),
+		Pattern: "keys/" + framework.GenericNameRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
-				Type:        framework.TypeString,
-				Description: "The key name",
+			"project": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "The project a key belongs to",
 			},
 			"flavor": {
 				Type:        framework.TypeString,
@@ -89,7 +89,7 @@ func (b *c4ghTransitBackend) pathKeyUpdate(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	project := d.Get("name").(string)
+	project := d.Get("project").(string)
 	flavor := d.Get("flavor").(string)
 	autorotate := time.Second * time.Duration(d.Get("auto_rotate_period").(int))
 
@@ -138,7 +138,7 @@ func (b *c4ghTransitBackend) pathKeyUpdate(
 }
 
 type pubKeyRet struct {
-	Name            string    `json:"project" structs:"project" mapstructure:"project"`
+	Project         string    `json:"project" structs:"project" mapstructure:"project"`
 	PublicKey64     string    `json:"public_key_base_64" structs:"public_key_64" mapstructure:"public_key_64"`
 	PublicKeyC4gh   string    `json:"public_key_c4gh" structs:"public_key_c4gh" mapstructure:"public_key_c4gh"`
 	PublicKeyC4gh64 string    `json:"public_key_c4gh_64" structs:"public_key_c4gh_64" mapstructure:"public_key_c4gh_64"`
@@ -151,7 +151,7 @@ func (b *c4ghTransitBackend) pathKeyRead(
 	req *logical.Request,
 	d *framework.FieldData,
 ) (*logical.Response, error) {
-	project := d.Get("name").(string)
+	project := d.Get("project").(string)
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -223,7 +223,7 @@ func (b *c4ghTransitBackend) pathKeyRead(
 		c4ghFormattedPublicKey := base64.StdEncoding.EncodeToString(c4ghPublicKey[:])
 
 		key := pubKeyRet{
-			Name:            "ed25519",
+			Project:         project,
 			PublicKey64:     v.FormattedPublicKey,
 			PublicKeyC4gh:   fmt.Sprintf("-----BEGIN CRYPT4GH PUBLIC KEY-----\n%s\n-----END CRYPT4GH PUBLIC KEY-----\n", c4ghFormattedPublicKey),
 			PublicKeyC4gh64: c4ghFormattedPublicKey,
