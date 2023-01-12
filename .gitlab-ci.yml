@@ -24,9 +24,9 @@ build-push:
     - mkdir -p output
     - go build -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
     - ls -l output/c4ghtransit
-    - ARTIFACT_MD5_CHECKSUM=$(md5sum c4ghtransit | awk '{print $1}')
-    - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 c4ghtransit | awk '{ print $1 }')
-    - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 c4ghtransit | awk '{ print $1 }')
+    - ARTIFACT_MD5_CHECKSUM=$(md5sum output/c4ghtransit | awk '{print $1}')
+    - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 output/c4ghtransit | awk '{ print $1 }')
+    - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 output/c4ghtransit | awk '{ print $1 }')
     - >
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
