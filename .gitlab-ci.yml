@@ -22,7 +22,8 @@ build-push:
       when: never
   script:
     - go build -v -o c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
-     if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
+    - >
+      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
         curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit" -T c4ghtransit
       else
