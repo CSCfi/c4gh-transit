@@ -22,9 +22,10 @@ build-push:
       when: never
   script:
     - go build -v -o c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
-    - ARTIFACT_MD5_CHECKSUM=$(md5sum $file | awk '{print $1}')
-    - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 $file | awk '{ print $1 }')
-    - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 $file | awk '{ print $1 }')
+    - ls -l c4ghtransit
+    - ARTIFACT_MD5_CHECKSUM=$(md5sum c4ghtransit | awk '{print $1}')
+    - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 c4ghtransit | awk '{ print $1 }')
+    - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 c4ghtransit | awk '{ print $1 }')
     - >
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
