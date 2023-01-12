@@ -25,12 +25,21 @@ build-push:
     - ARTIFACT_MD5_CHECKSUM=$(md5sum $file | awk '{print $1}')
     - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 $file | awk '{ print $1 }')
     - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 $file | awk '{ print $1 }')
-    - ARTIFACTORY_URL="https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME"
     - >
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
-        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \ "${ARTIFACTORY_URL}/c4ghtransit" -T c4ghtransit
+        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
+        --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
+        --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
+        --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
+        "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit" \
+        -T c4ghtransit
       else
         echo Pushing "${CI_COMMIT_TAG}" plugin build
-        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" "${ARTIFACTORY_URL}/c4ghtransit-${CI_COMMIT_TAG}" -T "c4ghtransit-${CI_COMMIT_TAG}"
+        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
+        --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
+        --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
+        --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
+        "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/c4ghtransit-${CI_COMMIT_TAG}" \
+        -T "c4ghtransit-${CI_COMMIT_TAG}"
       fi
