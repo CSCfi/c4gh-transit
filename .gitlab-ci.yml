@@ -21,8 +21,9 @@ build-push:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: never
   script:
-    - go build -v -o c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
-    - ls -l c4ghtransit
+    - mkdir -p output
+    - go build -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
+    - ls -l output/c4ghtransit
     - ARTIFACT_MD5_CHECKSUM=$(md5sum c4ghtransit | awk '{print $1}')
     - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 c4ghtransit | awk '{ print $1 }')
     - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 c4ghtransit | awk '{ print $1 }')
@@ -34,13 +35,14 @@ build-push:
         --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
         --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
         "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit" \
-        -T c4ghtransit
+        -T output/c4ghtransit
       else
         echo Pushing "${CI_COMMIT_TAG}" plugin build
+        mv output/c4ghtransit "output/c4ghtransit-${CI_COMMIT_TAG}"
         curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
         --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
         --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
         --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
         "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/c4ghtransit-${CI_COMMIT_TAG}" \
-        -T "c4ghtransit-${CI_COMMIT_TAG}"
+        -T "output/c4ghtransit-${CI_COMMIT_TAG}"
       fi
