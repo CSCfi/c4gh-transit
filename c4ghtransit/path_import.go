@@ -27,7 +27,7 @@ func (b *c4ghTransitBackend) pathImport() *framework.Path {
 			"flavor": {
 				Type:        framework.TypeString,
 				Default:     ed25519,
-				Description: `The type of key being imported. "crypt4gh" and "ed25519" are supported. Defaults to "ed25519".`,
+				Description: `The type of key being imported. Defaults to "ed25519".`,
 			},
 			"kdfname": {
 				Type:        framework.TypeString,
@@ -94,10 +94,6 @@ func (b *c4ghTransitBackend) pathImportWrite(ctx context.Context, req *logical.R
 	switch strings.ToLower(flavor) {
 	case ed25519:
 		polReq.KeyType = keysutil.KeyType_ED25519
-	case crypt4gh:
-		// Using ed25519 as internal key type for crypt4gh
-		// converting between the two with an internal convenience function
-		polReq.KeyType = keysutil.KeyType_ED25519
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type: %v", flavor)), logical.ErrInvalidRequest
 	}
@@ -119,12 +115,9 @@ func (b *c4ghTransitBackend) pathImportWrite(ctx context.Context, req *logical.R
 		return nil, err
 	}
 
-	switch strings.ToLower(flavor) {
-	case ed25519:
-		err = b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
-		if err != nil {
-			return nil, err
-		}
+	err = b.lm.ImportPolicy(ctx, polReq, key, b.GetRandomReader())
+	if err != nil {
+		return nil, err
 	}
 
 	return nil, nil
