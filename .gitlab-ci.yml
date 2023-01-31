@@ -1,6 +1,6 @@
 stages:
   - test
-  - build-push
+  - build
 
 test:
   stage: test
@@ -10,8 +10,8 @@ test:
     - GO_BIN=$(which go)
     - sudo ${GO_BIN} test -v ./c4ghtransit
 
-build-push:
-  stage: build-push
+build-binary:
+  stage: build
   tags:
     - sds
   rules:
@@ -23,7 +23,6 @@ build-push:
   script:
     - mkdir -p output
     - go build -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
-    - ls -l output/c4ghtransit
     - ARTIFACT_MD5_CHECKSUM=$(md5sum output/c4ghtransit | awk '{print $1}')
     - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 output/c4ghtransit | awk '{ print $1 }')
     - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 output/c4ghtransit | awk '{ print $1 }')
@@ -45,4 +44,40 @@ build-push:
         --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
         "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}" \
         -T "output/c4ghtransit-${CI_COMMIT_TAG}"
+      fi
+
+build-binary-alpine:
+  stage: build
+  tags:
+    - sds
+  rules:
+    - if: '$CI_COMMIT_TAG !~ "/^$/"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+  script:
+    - mkdir -p output
+    - CGO_ENABLED=0 go build -tags netgo -a -v -o output/c4ghtransit-alpine c4ghtransit/cmd/c4ghtransit/main.go
+    - ARTIFACT_MD5_CHECKSUM=$(md5sum output/c4ghtransit-alpine | awk '{print $1}')
+    - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 output/c4ghtransit-alpine | awk '{ print $1 }')
+    - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 output/c4ghtransit-alpine | awk '{ print $1 }')
+    - >
+      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
+        echo Pushing latest plugin build
+        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
+        --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
+        --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
+        --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
+        "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit-alpine" \
+        -T output/c4ghtransit-alpine
+      else
+        echo Pushing "${CI_COMMIT_TAG}" plugin build
+        mv output/c4ghtransit "output/c4ghtransit-alpine-${CI_COMMIT_TAG}"
+        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
+        --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
+        --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
+        --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
+        "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/c4ghtransit-alpine-${CI_COMMIT_TAG}" \
+        -T "output/c4ghtransit-alpine-${CI_COMMIT_TAG}"
       fi
