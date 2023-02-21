@@ -34,6 +34,29 @@ After this, you can e.g. create a new key with
 vault write c4ghtransit/keys/test-user
 ```
 
+### Updating Vault Plugin
+
+see what version is currently running
+```bash
+vault secrets list -detailed
+```
+
+copy the new binary to plugins folder
+```bash
+mv c4ghtransit-<version> /vault/plugins-folder
+chmod +x /vault/plugins-folder/c4ghtransit-<version>
+chown vault:vault /vault/plugins-folder/c4ghtransit-<version>
+```
+
+register the plugin
+```bash
+vault plugin register -sha256=<checksum> -command=c4ghtransit-<version> -version=<version> secret c4ghtransit
+
+vault secrets tune -plugin-version=<version> c4ghtransit
+
+vault plugin reload -plugin c4ghtransit
+vault secrets list -detailed
+```
 ## Tests
 There are only acceptance tests, which run in Docker. They can be run with
 
