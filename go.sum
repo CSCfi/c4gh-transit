@@ -5,8 +5,8 @@ filippo.io/edwards25519 v1.0.0/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5E
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 h1:UQHMgLO+TxOElx5B5HZ4hJQsoJ/PvUvKRhJHDQXO8P8=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/CSCfi/vault-testing-stepwise v0.3.2 h1:LKP5ULdsWw3B6neeQjj0n7NdR3WiJxwXCPzEonRBEvQ=
-github.com/CSCfi/vault-testing-stepwise v0.3.2/go.mod h1:1no4HnL/WdyHcr4LFsvEIaTUHMdAl+cPMUl5PVHNLko=
+github.com/CSCfi/vault-testing-stepwise v0.3.3 h1:F7lbffIMC2QjvxqCxzMCwaMrxCH+2esuhdrkLc57QJs=
+github.com/CSCfi/vault-testing-stepwise v0.3.3/go.mod h1:JSjUT1IDZsYVsxy9+aQc7a4ugt6cO7/41aB+6kl03RA=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/Microsoft/go-winio v0.5.2 h1:a9IhgEQBCUEk6QCdml9CiJGhAws+YwffDHEMp1VMrpA=
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
