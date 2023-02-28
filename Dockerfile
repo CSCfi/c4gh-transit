@@ -1,4 +1,4 @@
-FROM golang:1.19.2-buster as PLUGIN
+FROM golang:1.20-buster as PLUGIN
 
 WORKDIR /usr/src
 
@@ -12,7 +12,7 @@ RUN apt-get -y update && \
 COPY . .
 RUN go build -ldflags=-w -v -o /usr/local/bin/c4ghtransit ./c4ghtransit/cmd/c4ghtransit/main.go
 
-FROM golang:1.19.2-buster
+FROM golang:1.20-buster
 
 RUN apt-get -y update && \
     apt-get -y upgrade && \
