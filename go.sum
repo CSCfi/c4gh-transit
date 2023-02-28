@@ -5,8 +5,8 @@ filippo.io/edwards25519 v1.0.0/go.mod h1:N1IkdkCkiLB6tki+MYJoSx2JTY9NUlxZE7eHn5E
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 h1:UQHMgLO+TxOElx5B5HZ4hJQsoJ/PvUvKRhJHDQXO8P8=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/CSCfi/vault-testing-stepwise v0.3.2 h1:LKP5ULdsWw3B6neeQjj0n7NdR3WiJxwXCPzEonRBEvQ=
-github.com/CSCfi/vault-testing-stepwise v0.3.2/go.mod h1:1no4HnL/WdyHcr4LFsvEIaTUHMdAl+cPMUl5PVHNLko=
+github.com/CSCfi/vault-testing-stepwise v0.3.3 h1:F7lbffIMC2QjvxqCxzMCwaMrxCH+2esuhdrkLc57QJs=
+github.com/CSCfi/vault-testing-stepwise v0.3.3/go.mod h1:JSjUT1IDZsYVsxy9+aQc7a4ugt6cO7/41aB+6kl03RA=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/Microsoft/go-winio v0.5.2 h1:a9IhgEQBCUEk6QCdml9CiJGhAws+YwffDHEMp1VMrpA=
 github.com/Microsoft/go-winio v0.5.2/go.mod h1:WpS1mjBmmwHBEWmogvA2mj8546UReBk4v8QkMxJ6pZY=
@@ -219,8 +219,8 @@ github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3Rllmb
 github.com/morikuni/aec v1.0.0 h1:nP9CBfwrvYnBRgY6qfDQkygYDmYwOilePFkwzv4dU8A=
 github.com/mrunalp/fileutils v0.5.0/go.mod h1:M1WthSahJixYnrXQl/DFQuteStB1weuxD2QJNHXfbSQ=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
-github.com/neicnordic/crypt4gh v1.6.2 h1:491Q1OmGp1GQ5EacVNbkYxFYxpBD2pT5nyL0Y4tb/Eo=
-github.com/neicnordic/crypt4gh v1.6.2/go.mod h1:I4d2FrwVyhNKG80Q3c4vrBNxPFjVEyRJu2vUWJNJ9iM=
+github.com/neicnordic/crypt4gh v1.7.1 h1:iVMxHdslVMGHyN3UFpnvFbtZUFY9OBOqL4SkXk9vZ9k=
+github.com/neicnordic/crypt4gh v1.7.1/go.mod h1:n5kF/UP0cJ681noIZXBejpat8Hg7QMssosROoKatIhU=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
