@@ -226,13 +226,11 @@ func (b *c4ghTransitBackend) pathFilesRead(
 		return nil, err
 	}
 	if pkey == nil {
-		return logical.ErrorResponse("Latest key not found."), nil
+		return logical.ErrorResponse("Key not found."), nil
 	}
 
 	// Copy the key to a fixed length array since NewHeader is picky
-	var edPrivkeyBytes [chacha20poly1305.KeySize * 2]byte
 	var privkey [chacha20poly1305.KeySize]byte
-	copy(edPrivkeyBytes[:], pkey)
 	keys.PrivateKeyToCurve25519(&privkey, pkey)
 
 	// Get the allowed receivers' key from whitelist
@@ -304,9 +302,8 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	if err != nil {
 		return nil, err
 	}
-	var edPrivkeyBytes [chacha20poly1305.KeySize * 2]byte
+
 	var privkey [chacha20poly1305.KeySize]byte
-	copy(edPrivkeyBytes[:], key)
 	keys.PrivateKeyToCurve25519(&privkey, key)
 
 	fmt.Println("Decoding base64 header")

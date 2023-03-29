@@ -66,7 +66,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*c4ghTransitBack
 			b.pathImport(),
 			b.pathBackup(),
 			b.pathRestore(),
-			// b.pathRewrap(),  TODO PATH FOR REWRAP
+			b.pathRewrap(),
 		},
 
 		Secrets:      []*framework.Secret{},
