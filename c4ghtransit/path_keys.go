@@ -31,24 +31,6 @@ func (b *c4ghTransitBackend) pathKeys() *framework.Path {
 				Description: "Key type, ed25519 or crypt4gh",
 				Required:    true,
 			},
-			"privkey": {
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "Private key for header decryption",
-				Required:    false,
-			},
-			"pubkey": {
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "Public key for header decryption",
-				Required:    false,
-			},
-			"password": {
-				Type:        framework.TypeString,
-				Default:     "",
-				Description: "Password for decrypting the private key",
-				Required:    false,
-			},
 			"auto_rotate_period": {
 				Type:    framework.TypeDurationSecond,
 				Default: 0,

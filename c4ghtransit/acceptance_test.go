@@ -252,14 +252,15 @@ func testC4ghStepwiseReadFile(t *testing.T, project string, container string, pa
 				return fmt.Errorf("Response was nil")
 			}
 			var data struct {
-				Header     string `mapstructure:"header"`
-				KeyVersion int    `mapstructure:"keyversion"`
+				Headers       map[string]map[string]string `mapstructure:"headers"`
+				LatestVersion string                       `mapstructure:"latest_version"`
 			}
 			if err := mapstructure.Decode(resp.Data, &data); err != nil {
 				fmt.Println("failed decoding to mapstructure")
 				return err
 			}
-			decryptedFile, err := decryptFile(data.Header, encryptedFiles[path], privateKey)
+			header := data.Headers[data.LatestVersion]["header"]
+			decryptedFile, err := decryptFile(header, encryptedFiles[path], privateKey)
 			if err != nil {
 				fmt.Println("Error decrypting file: ", err)
 
