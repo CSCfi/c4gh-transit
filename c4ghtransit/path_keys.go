@@ -133,6 +133,7 @@ func (b *c4ghTransitBackend) pathKeyUpdate(
 	resp := &logical.Response{}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", project))
+		return resp, nil
 	}
 	return nil, nil
 }
@@ -212,13 +213,11 @@ func (b *c4ghTransitBackend) pathKeyRead(
 	retKeys := map[string]map[string]interface{}{}
 	for k, v := range p.Keys {
 		var c4ghPublicKey [chacha20poly1305.KeySize]byte
-		var edPublicKeyBytes [chacha20poly1305.KeySize]byte
 		publicKey, err := base64.StdEncoding.DecodeString(v.FormattedPublicKey)
 		if err != nil {
 			return nil, err
 		}
 
-		copy(edPublicKeyBytes[:], publicKey)
 		keys.PublicKeyToCurve25519(&c4ghPublicKey, publicKey)
 		c4ghFormattedPublicKey := base64.StdEncoding.EncodeToString(c4ghPublicKey[:])
 
@@ -257,7 +256,7 @@ const (
 	pathKeyHelpSynopsis    = `Manages the encryption keys used for decrypting headers`
 	pathKeyHelpDescription = `
 This path allows you to add keys for decrypting the headers when performing
-re-encryption on stored headers. A full key history will always  preserved,
+re-encryption on stored headers. A full key history will always be preserved,
 i.e. key deletion and updates are forbidden.
 `
 	pathKeysListHelpSynopsis    = `List the managed encryption keys used for decryption.`
