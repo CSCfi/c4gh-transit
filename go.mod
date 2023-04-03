@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/CSCfi/vault-testing-stepwise v0.3.3
 	github.com/fatih/structs v1.1.0
-	github.com/hashicorp/go-hclog v1.4.0
+	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/hashicorp/vault/sdk v0.8.1
