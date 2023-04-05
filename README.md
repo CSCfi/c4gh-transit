@@ -6,26 +6,88 @@ download access by public key, automatic key generation for crypt4gh keys
 along with some other changes related to the file type. Plugin tries to re-use
 as much of the original plugin code as possible.
 
-## Usage
-To develop, local installation of `Vault` is required.
+## Download built binaries
 
-First build the module:
+Each git tag triggers a release build that compiles and uploads binaries to Artifactory. 
+
+There are compiled binaries available for alpine and other x86_64 linux systems from [`artifactory`](https://sds-docker.artifactory.ci.csc.fi/artifactory/webapp/#/artifacts/browse/tree/General/sds-generic-local/c4gh-transit/c4ghtransit-alpine).
+
+You can download the latest version here:
+- [Alpine](https://artifactory.ci.csc.fi/artifactory/sds-generic-local/c4gh-transit/c4ghtransit-alpine)
+- [Linux](https://artifactory.ci.csc.fi/artifactory/sds-generic-local/c4gh-transit/c4ghtransit)
+
+Note that it requires authentication to download.
+
+## Building
+The binary must be build for the platform it will run in.
+Even though that might be obvious, there is only Alpine official docker vault image.
+And building locally in a development machine will not be compatible with the 
+official image.
+
+Note: the docker images will not cache dependencies and build assets over subsequent builds with the configuration given below.
+
+### Building for the local environment
+
 ```bash
 mkdir -p vault/plugins
 go build -v -o vault/plugins/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
-Install vault: https://developer.hashicorp.com/vault/docs/install#precompiled-binaries
-
-Then run a development server with the plugin
-```bash
-VAULT_LOG_LEVEL=DEBUG vault server -dev -dev-plugin-dir=vault/plugins -dev-root-token-id="devroot"
+With the golang debian docker image
+```
+docker run --rm \
+    -u $(id -u):$(id -g) \
+    --env XDG_CACHE_HOME=/tmp \
+    -v ${PWD}/:/c4ghtransit \
+    -w /c4ghtransit \
+    golang:bullseye \
+    go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
+### Building for Alpine
+
+With local environment, so the binary will be statically linked, and will use a golang implementation of the networking library.
+
+    CGO_ENABLED=0 go build -tags netgo -a -v -o output/c4ghtransit-alpine c4ghtransit/cmd/c4ghtransit/main.go
+
+With the golang docker alpine image
+```
+docker run --rm \
+    -u $(id -u):$(id -g) \
+    --env XDG_CACHE_HOME=/tmp \
+    -v ${PWD}/:/c4ghtransit \
+    -w /c4ghtransit \
+    golang:1.20-alpine \
+    go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
+```
+
+## Running with the vault server
+
+The commands below assume that the plugin binary exists at `./vault/plugins/c4ghtransit`
+
+### In local environment
+Install vault: https://developer.hashicorp.com/vault/downloads
+
+Then run a development server with the plugin available
+
+`VAULT_LOG_LEVEL=DEBUG vault server -dev -dev-plugin-dir=vault/plugins -dev-root-token-id="devroot"`
+
+### With docker Alpine image
+```
+docker run --rm \
+    --name=dev-vault \
+    -e 'VAULT_DEV_ROOT_TOKEN_ID=devroot' \
+    -e 'VAULT_LOCAL_CONFIG={"storage": {"file": {"path": "/vault/data"}}, "disable_mlock": true, "ui": true}' -p 8200:8200 \
+    -v ${PWD}/vault/plugins:/vault/plugins \
+    hashicorp/vault:latest \
+    server -dev -dev-plugin-dir=/vault/plugins
+```
+
+## Usage
 Login to dev server, and enable the plugin
 ```bash
 export VAULT_ADDR='http://127.0.0.1:8200'
-vault login
+vault login token=devroot
 vault secrets enable c4ghtransit
 ```
 
