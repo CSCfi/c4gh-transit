@@ -10,7 +10,7 @@ as much of the original plugin code as possible.
 
 Each git tag triggers a release build that compiles and uploads binaries to Artifactory. 
 
-There are compiled binaries available for alpine and other x86_64 linux systems from [`artifactory`](https://sds-docker.artifactory.ci.csc.fi/artifactory/webapp/#/artifacts/browse/tree/General/sds-generic-local/c4gh-transit).
+There are compiled binaries available for alpine and other x86_64 linux systems from [`artifactory`](https://sds-docker.artifactory.ci.csc.fi/artifactory/webapp/#/artifacts/browse/tree/General/sds-generic-local/c4gh-transit/c4ghtransit-alpine).
 
 You can download the latest version here:
 - [Alpine](https://artifactory.ci.csc.fi/artifactory/sds-generic-local/c4gh-transit/c4ghtransit-alpine)
