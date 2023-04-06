@@ -36,10 +36,10 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 	mountOptions := stepwise.MountOptions{
 		MountPathPrefix: "c4ghtransit",
 		RegistryName:    "c4ghtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "c4ghtransit",
 	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions)
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -86,10 +86,10 @@ func TestKeyRotateAndHeaderRewrap(t *testing.T) {
 	mountOptions := stepwise.MountOptions{
 		MountPathPrefix: "c4ghtransit",
 		RegistryName:    "c4ghtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "c4ghtransit",
 	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions)
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {

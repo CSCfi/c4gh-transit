@@ -9,8 +9,11 @@ import (
 
 	stepwise "github.com/CSCfi/vault-testing-stepwise"
 	"github.com/CSCfi/vault-testing-stepwise/environments/docker"
+	"github.com/hashicorp/vault/api"
 	"github.com/neicnordic/crypt4gh/keys"
 )
+
+const vaultImage = "hashicorp/vault:latest"
 
 func TestKeyRotateMultipleTimes(t *testing.T) {
 	err := os.Setenv("VAULT_ACC", "1")
@@ -20,10 +23,10 @@ func TestKeyRotateMultipleTimes(t *testing.T) {
 	mountOptions := stepwise.MountOptions{
 		MountPathPrefix: "c4ghtransit",
 		RegistryName:    "c4ghtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "c4ghtransit",
 	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions)
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -73,10 +76,10 @@ func TestKeyRotateMultipleTimesAndRewrap(t *testing.T) {
 	mountOptions := stepwise.MountOptions{
 		MountPathPrefix: "c4ghtransit",
 		RegistryName:    "c4ghtransit",
-		PluginType:      stepwise.PluginTypeSecrets,
+		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "c4ghtransit",
 	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions)
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
