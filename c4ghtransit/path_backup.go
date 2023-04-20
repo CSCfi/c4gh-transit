@@ -47,6 +47,56 @@ func (b *c4ghTransitBackend) pathBackup() *framework.Path {
 	}
 }
 
+func (b *c4ghTransitBackend) pathBackupList() *framework.Path {
+	return &framework.Path{
+		Pattern: "backup/" + framework.GenericNameRegex("type") + "/?$",
+		Fields: map[string]*framework.FieldSchema{
+			"type": {
+				Type:        framework.TypeString,
+				Description: "'keys' or 'files' if user wishes to list projects with keys or files stored.",
+				Required: true,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathListBackups,
+			},
+		},
+		HelpSynopsis:    pathContainerListHelpSynopsis,
+		HelpDescription: pathContainerListHelpDescription,
+	}
+}
+
+func (b *c4ghTransitBackend) pathListBackups(
+	ctx context.Context,
+	req *logical.Request,
+	d *framework.FieldData,
+) (*logical.Response, error) {
+	contentType := d.Get("type").(string)
+
+	switch contentType {
+	case "files":
+		listPath := fmt.Sprintf("files/")
+
+		entries, err := req.Storage.List(ctx, listPath)
+	
+		if err != nil {
+			return nil, err
+		}
+	
+		return logical.ListResponse(entries), nil
+	case "keys":
+		entries, err := req.Storage.List(ctx, "policy/")
+		if err != nil {
+			return nil, err
+		}
+	
+		return logical.ListResponse(entries), nil
+	default:
+		return logical.ErrorResponse("Backup listing type not supported."), nil
+	}
+}
+
 func (b *c4ghTransitBackend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	contentType := d.Get("type").(string)
 	project := d.Get("project").(string)
