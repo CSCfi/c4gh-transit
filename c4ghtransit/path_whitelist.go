@@ -75,7 +75,7 @@ func (b *c4ghTransitBackend) pathWhitelist() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathWhitelistList() *framework.Path {
+func (b *c4ghTransitBackend) pathListServices() *framework.Path {
 	return &framework.Path{
 		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -87,16 +87,41 @@ func (b *c4ghTransitBackend) pathWhitelistList() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback: b.pathListWhitelist,
+				Callback: b.pathServicesList,
 			},
 		},
-		HelpSynopsis:    pathWhitelistListHelpSynopsis,
-		HelpDescription: pathWhitelistListHelpDescription,
+		HelpSynopsis:    pathServicesListHelpSynopsis,
+		HelpDescription: pathServicesListHelpDescription,
+	}
+}
+
+func (b *c4ghTransitBackend) pathListWhitelistedKeys() *framework.Path {
+	return &framework.Path{
+		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("service") + "/?$",
+		Fields: map[string]*framework.FieldSchema{
+			"project": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that the key is uploaded for",
+				Required:    true,
+			},
+			"service": {
+				Type:        framework.TypeNameString,
+				Description: "Identifier or name for the whitelisted service or user",
+				Required:    true,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathWhitelistedKeysList,
+			},
+		},
+		HelpSynopsis:    pathWhitelistedKeysListHelpSynopsis,
+		HelpDescription: pathWhitelistedKeysListHelpDescription,
 	}
 }
 
 // List whitelisted keys in Vault storage
-func (b *c4ghTransitBackend) pathListWhitelist(
+func (b *c4ghTransitBackend) pathServicesList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -104,6 +129,24 @@ func (b *c4ghTransitBackend) pathListWhitelist(
 	project := d.Get("project").(string)
 	listPath := fmt.Sprintf("whitelist/%s/", project)
 	entries, err := req.Storage.List(ctx, listPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
+// List all keys uploaded to a specific service
+func (b *c4ghTransitBackend) pathWhitelistedKeysList(
+	ctx context.Context,
+	req *logical.Request,
+	d *framework.FieldData,
+) (*logical.Response, error) {
+	project := d.Get("project").(string)
+	service := d.Get("service").(string)
+	listPath := fmt.Sprintf("whitelist/%s/%s/", project, service)
+	entries, err := req.Storage.List(ctx, listPath)
+
 	if err != nil {
 		return nil, err
 	}
@@ -231,6 +274,8 @@ const (
 This path allows you to whitelist public keys to re-encrypt for with c4gh-transit
 plugin. The whitelisted public key can be specified in the pubkey field.
 `
-	pathWhitelistListHelpSynopsis    = `List the whitelisted keys for c4gh-transit`
-	pathWhitelistListHelpDescription = `Whitelisted key order is not specified`
+	pathServicesListHelpSynopsis           = `List of services into which keys have been uploaded`
+	pathServicesListHelpDescription        = `Order of services not specified`
+	pathWhitelistedKeysListHelpSynopsis    = `Lists the whitelisted keys for a specific service`
+	pathWhitelistedKeysListHelpDescription = `Whitelisted key order is not specified`
 )

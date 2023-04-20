@@ -30,15 +30,15 @@ type WhitelistData struct {
 
 func (b *c4ghTransitBackend) pathRestore() *framework.Path {
 	return &framework.Path{
-		Pattern: "restore/" + framework.GenericNameRegex("type") + framework.OptionalParamRegex("name"),
+		Pattern: "restore/" + framework.GenericNameRegex("type") + framework.OptionalParamRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
 			"backup": {
 				Type:        framework.TypeString,
 				Description: "Backed up data to be restored. This should be the output from the 'backup/' endpoint.",
 			},
-			"name": {
+			"project": {
 				Type:        framework.TypeString,
-				Description: "If set, this will be the name of the restored key/file.",
+				Description: "If set, this will be the name of the project of the restored key/file.",
 			},
 			"type": {
 				Type:        framework.TypeString,
@@ -70,24 +70,24 @@ func (b *c4ghTransitBackend) pathRestoreUpdate(ctx context.Context, req *logical
 
 	// If a name is given, make sure it does not contain any slashes. The Transit
 	// secret engine does not allow sub-paths in key names
-	keyName := d.Get("name").(string)
-	if strings.Contains(keyName, "/") {
+	project := d.Get("project").(string)
+	if strings.Contains(project, "/") {
 		return nil, ErrInvalidKeyName
 	}
 
 	switch contentType {
 	case "keys":
-		return nil, b.lm.RestorePolicy(ctx, req.Storage, keyName, backupB64, force)
+		return nil, b.lm.RestorePolicy(ctx, req.Storage, project, backupB64, force)
 	case "files":
-		return b.restoreFile(ctx, req.Storage, keyName, backupB64, force)
+		return b.restoreFile(ctx, req.Storage, project, backupB64, force)
 	case "whitelist":
-		return b.restoreWhitelist(ctx, req.Storage, keyName, backupB64, force)
+		return b.restoreWhitelist(ctx, req.Storage, project, backupB64, force)
 	default:
 		return logical.ErrorResponse("Backup type not supported."), nil
 	}
 }
 
-func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.Storage, name, backup string, force bool) (*logical.Response, error) {
+func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.Storage, project, backup string, force bool) (*logical.Response, error) {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return nil, err
@@ -100,16 +100,16 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 	}
 
 	// Set a different name if desired
-	if name != "" {
-		fileData.Name = name
+	if project != "" {
+		fileData.Name = project
 	}
 
-	name = fileData.Name
+	project = fileData.Name
 	resp := &logical.Response{}
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: storage,
-		Name:    name,
+		Name:    project,
 	}, b.GetRandomReader())
 
 	skipKey := false
@@ -130,14 +130,14 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 	}
 
 	if !skipKey {
-		if err = b.lm.RestorePolicy(ctx, storage, name, fileData.Key, force); err != nil {
+		if err = b.lm.RestorePolicy(ctx, storage, project, fileData.Key, force); err != nil {
 			return nil, fmt.Errorf("Could not restore encryption key: %w", err)
 		}
 	}
 
 	for container, files := range fileData.Files {
 		for _, file := range files {
-			filePath := fmt.Sprintf("files/%s/%s/%s", name, container, file.Filename)
+			filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file.Filename)
 			entry, err := storage.Get(ctx, filePath)
 			if err != nil {
 				return nil, err
@@ -147,10 +147,9 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 				continue
 			}
 
-			newEntry, err := logical.StorageEntryJSON(filePath, map[string]interface{}{
-				"header":     file.Entry.Header,
-				"keyversion": file.Entry.Keyversion,
-				"added":      file.Entry.Added,
+			newEntry, err := logical.StorageEntryJSON(filePath, fileEntryMap{
+				Headers:       file.Entry.Headers,
+				LatestVersion: file.Entry.LatestVersion,
 			})
 
 			if err != nil {
@@ -165,7 +164,7 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 	return resp, nil
 }
 
-func (b *c4ghTransitBackend) restoreWhitelist(ctx context.Context, storage logical.Storage, name, backup string, force bool) (*logical.Response, error) {
+func (b *c4ghTransitBackend) restoreWhitelist(ctx context.Context, storage logical.Storage, project, backup string, force bool) (*logical.Response, error) {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return nil, err
@@ -178,29 +177,30 @@ func (b *c4ghTransitBackend) restoreWhitelist(ctx context.Context, storage logic
 	}
 
 	// Set a different name if desired
-	if name != "" {
-		whitelistData.Name = name
+	if project != "" {
+		whitelistData.Name = project
 	}
 
-	name = whitelistData.Name
+	project = whitelistData.Name
 	resp := &logical.Response{}
 
 	for _, data := range whitelistData.Whitelisted {
-		listPath := fmt.Sprintf("whitelist/%s/%s", name, data.Service)
+		listPath := fmt.Sprintf("whitelist/%s/%s/%s", project, data.Service, data.Name)
 		entry, err := storage.Get(ctx, listPath)
 		if err != nil {
 			return nil, err
 		}
 		if entry != nil && !force {
-			resp.AddWarning(fmt.Sprintf("project %s already has whitelisted key for service %s", name, data.Service))
+			resp.AddWarning(fmt.Sprintf("project %s already has whitelisted key named %s for service %s", project, data.Name, data.Service))
 			continue
 		}
 
-		newEntry, err := logical.StorageEntryJSON(listPath, map[string]interface{}{
-			"key":     data.Key,
-			"flavor":  data.Flavor,
-			"service": data.Service,
-			"project": name,
+		newEntry, err := logical.StorageEntryJSON(listPath, transitWhitelistEntry{
+			Key:     data.Key,
+			Flavor:  data.Flavor,
+			Service: data.Service,
+			Name:    data.Name,
+			Project: project,
 		})
 
 		if err != nil {

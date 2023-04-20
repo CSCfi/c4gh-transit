@@ -13,8 +13,8 @@ import (
 )
 
 type backupFileEntry struct {
-	Filename string             `json:"filename"`
-	Entry    reencryptFileEntry `json:"entry"`
+	Filename string       `json:"filename"`
+	Entry    fileEntryMap `json:"entry"`
 }
 
 type transitWhitelistEntrySansProject struct {
@@ -26,11 +26,11 @@ type transitWhitelistEntrySansProject struct {
 
 func (b *c4ghTransitBackend) pathBackup() *framework.Path {
 	return &framework.Path{
-		Pattern: "backup/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name"),
+		Pattern: "backup/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": {
+			"project": {
 				Type:        framework.TypeString,
-				Description: "The key or file name",
+				Description: "The project the key or file belongs to",
 			},
 			"type": {
 				Type:        framework.TypeString,
@@ -49,7 +49,7 @@ func (b *c4ghTransitBackend) pathBackup() *framework.Path {
 
 func (b *c4ghTransitBackend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	contentType := d.Get("type").(string)
-	project := d.Get("name").(string)
+	project := d.Get("project").(string)
 
 	var backup string
 	var err error
@@ -107,7 +107,7 @@ func (b *c4ghTransitBackend) backupFile(ctx context.Context, storage logical.Sto
 				return "", err
 			}
 			if entry != nil {
-				var result reencryptFileEntry
+				var result fileEntryMap
 				if err := entry.DecodeJSON(&result); err != nil {
 					return "", err
 				}
@@ -147,17 +147,28 @@ func (b *c4ghTransitBackend) backupWhitelist(ctx context.Context, storage logica
 
 	backup := map[string]interface{}{"backup_time": time.Now(), "name": project}
 	entries := make([]transitWhitelistEntrySansProject, 0, len(services))
-	for _, service := range services {
-		entry, err := storage.Get(ctx, "whitelist/"+project+"/"+service)
+	for _, s := range services {
+		service := strings.TrimSuffix(s, "/")
+		keyNames, err := storage.List(ctx, "whitelist/"+project+"/"+service+"/")
 		if err != nil {
 			return "", err
 		}
-		if entry != nil {
-			var result transitWhitelistEntrySansProject
-			if err := entry.DecodeJSON(&result); err != nil {
+		if keyNames == nil {
+			continue
+		}
+
+		for _, keyName := range keyNames {
+			entry, err := storage.Get(ctx, "whitelist/"+project+"/"+service+"/"+keyName)
+			if err != nil {
 				return "", err
 			}
-			entries = append(entries, result)
+			if entry != nil {
+				var result transitWhitelistEntrySansProject
+				if err := entry.DecodeJSON(&result); err != nil {
+					return "", err
+				}
+				entries = append(entries, result)
+			}
 		}
 	}
 

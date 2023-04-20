@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/CSCfi/vault-testing-stepwise/environments/docker"
@@ -139,6 +140,59 @@ func TestKeyRotateAndHeaderRewrap(t *testing.T) {
 	stepwise.Run(t, simpleCase)
 }
 
+func TestHeaderVersoning(t *testing.T) {
+	err := os.Setenv("VAULT_ACC", "1")
+	if err != nil {
+		t.Error("Failed to set VAULT_ACC")
+	}
+	mountOptions := stepwise.MountOptions{
+		MountPathPrefix: "c4ghtransit",
+		RegistryName:    "c4ghtransit",
+		PluginType:      stepwise.PluginTypeSecrets,
+		PluginName:      "c4ghtransit",
+	}
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions)
+
+	publicKey, privateKey, err := keys.GenerateKeyPair()
+	if err != nil {
+		fmt.Print("Failed to generate crypt4gh key pair")
+		t.Error(err)
+	}
+	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
+
+	project := "my-project"
+	service := "fake-service"
+	keyName := "fake-key-name"
+	container := "bucket"
+	path := "hidden-in-a-bucket.txt.c4gh"
+	badContent := "I am not uploaded correctly in sd connect"
+
+	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
+	// Each step in a case is run sequentially.
+	// At the end of the case, the Docker container and network are removed, unless `SkipTeardown` is set to `true`
+	simpleCase := stepwise.Case{
+		Environment:  env,
+		SkipTeardown: false,
+		Steps: []stepwise.Step{
+			// Create a project key
+			testC4ghStepwiseWriteKey(t, project),
+			// Get the project key
+			testC4ghStepwiseReadKey(t, project),
+			// Add locally created pub key to the whitelist
+			testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString),
+			// Confirm key exists
+			testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString),
+			// Upload encrypt file
+			testC4ghStepwiseWriteFile(t, project, container, path),
+			// Upload same file with new content
+			testC4ghStepwiseWriteFile(t, project, container, path, badContent),
+			// Download encrypted file with old content after the newer content was not saved
+			testC4ghStepwiseReadFile(t, project, container, path, privateKey, service, keyName),
+		},
+	}
+	stepwise.Run(t, simpleCase)
+}
+
 func testC4ghStepwiseWriteKey(_ *testing.T, project string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteKey",
@@ -215,18 +269,24 @@ func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string,
 	}
 }
 
-func testC4ghStepwiseWriteFile(t *testing.T, project, container, path string) stepwise.Step {
+func testC4ghStepwiseWriteFile(t *testing.T, project, container, path string, otherContent ...string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteFile",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
 		GetData: func() (map[string]interface{}, error) {
-			encryptedHeader, encryptedBody, err := encryptFile(projectKey, []byte(content))
+			byteContent := []byte(content)
+			if len(otherContent) > 0 {
+				byteContent = []byte(otherContent[0])
+			}
+			encryptedHeader, encryptedBody, err := encryptFile(projectKey, byteContent)
 			if err != nil {
 				fmt.Println("Failed encrypting file: ", err)
 				return nil, err
 			}
-			encryptedFiles[path] = encryptedBody
+			if len(otherContent) == 0 {
+				encryptedFiles[path] = encryptedBody
+			}
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
 		Assert: func(resp *api.Secret, err error) error {
@@ -252,18 +312,28 @@ func testC4ghStepwiseReadFile(t *testing.T, project string, container string, pa
 				return fmt.Errorf("Response was nil")
 			}
 			var data struct {
-				Header     string `mapstructure:"header"`
-				KeyVersion int    `mapstructure:"keyversion"`
+				Headers       map[string]map[string]string `mapstructure:"headers"`
+				LatestVersion int                          `mapstructure:"latest_version"`
 			}
 			if err := mapstructure.Decode(resp.Data, &data); err != nil {
 				fmt.Println("failed decoding to mapstructure")
-				return err
-			}
-			decryptedFile, err := decryptFile(data.Header, encryptedFiles[path], privateKey)
-			if err != nil {
-				fmt.Println("Error decrypting file: ", err)
 
 				return err
+			}
+			var decryptedFile []byte
+			version := data.LatestVersion
+			for {
+				header := data.Headers[strconv.Itoa(version)]["header"]
+				decryptedFile, err = decryptFile(header, encryptedFiles[path], privateKey)
+				if err == nil {
+					break
+				}
+				version--
+				if version == 0 {
+					fmt.Println("Error decrypting file: ", err)
+
+					return err
+				}
 			}
 			var decryptedFileString = string(decryptedFile)
 			assert.Equal(t, decryptedFileString, content, "Decrypted file and original content don't match")

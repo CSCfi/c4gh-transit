@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -19,6 +20,11 @@ type reencryptFileEntry struct {
 	Header     string    `json:"header" structs:"header" mapstructure:"header"`
 	Keyversion int       `json:"keyversion" structs:"keyversion" mapstructure:"keyversion"`
 	Added      time.Time `json:"added" struct:"added" mapstructure:"added"`
+}
+
+type fileEntryMap struct {
+	Headers       map[string]reencryptFileEntry `json:"headers" structs:"headers" mapstructure:"headers"`
+	LatestVersion int                           `json:"latest_version" structs:"latest_version" mapstructure:"latest_version"`
 }
 
 // pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
@@ -181,7 +187,7 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	file := d.Get("file").(string)
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
-	// Open the old header
+	// Open old headers
 	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
 	entry, err := req.Storage.Get(ctx, filePath)
 	if err != nil {
@@ -191,18 +197,8 @@ func (b *c4ghTransitBackend) pathFilesRead(
 		return nil, nil
 	}
 
-	var result reencryptFileEntry
+	var result fileEntryMap
 	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	decHeader, err := base64.StdEncoding.DecodeString(result.Header)
-	if err != nil {
-		fmt.Println("decode error:", err)
-		return logical.ErrorResponse(("Incorrectly formed header.")), nil
-	}
-	binaryHeader, err := headers.ReadHeader(bytes.NewReader(decHeader))
-	if err != nil {
 		return nil, err
 	}
 
@@ -221,17 +217,6 @@ func (b *c4ghTransitBackend) pathFilesRead(
 		p.Lock(false)
 	}
 	defer p.Unlock()
-	pkey, err := p.GetKey(nil, result.Keyversion, p.KeySize)
-	if err != nil {
-		return nil, err
-	}
-	if pkey == nil {
-		return logical.ErrorResponse("Key not found."), nil
-	}
-
-	// Copy the key to a fixed length array since NewHeader is picky
-	var privkey [chacha20poly1305.KeySize]byte
-	keys.PrivateKeyToCurve25519(&privkey, pkey)
 
 	// Get the allowed receivers' key from whitelist
 	listPath := fmt.Sprintf("whitelist/%s/%s/%s", project, service, keyName)
@@ -255,15 +240,45 @@ func (b *c4ghTransitBackend) pathFilesRead(
 	var receiver [chacha20poly1305.KeySize]byte
 	copy(receiver[:], pubkey)
 
-	newBinaryHeader, err := headers.ReEncryptHeader(binaryHeader, privkey, [][chacha20poly1305.KeySize]byte{receiver})
-	if err != nil {
-		return nil, err
+	for k, v := range result.Headers {
+		decHeader, err := base64.StdEncoding.DecodeString(v.Header)
+		if err != nil {
+			fmt.Println("decode error:", err)
+			return logical.ErrorResponse("Incorrectly formed header version %s.", k), nil
+		}
+		binaryHeader, err := headers.ReadHeader(bytes.NewReader(decHeader))
+		if err != nil {
+			return nil, err
+		}
+
+		pkey, err := p.GetKey(nil, v.Keyversion, p.KeySize)
+		if err != nil {
+			return nil, err
+		}
+		if pkey == nil {
+			return logical.ErrorResponse("Key version %d not found.", v.Keyversion), nil
+		}
+
+		// Copy the key to a fixed length array since NewHeader is picky
+		var privkey [chacha20poly1305.KeySize]byte
+		keys.PrivateKeyToCurve25519(&privkey, pkey)
+
+		newBinaryHeader, err := headers.ReEncryptHeader(binaryHeader, privkey, [][chacha20poly1305.KeySize]byte{receiver})
+		if err != nil {
+			return nil, err
+		}
+
+		result.Headers[k] = reencryptFileEntry{
+			Header:     base64.StdEncoding.EncodeToString(newBinaryHeader),
+			Keyversion: v.Keyversion,
+			Added:      v.Added,
+		}
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"header":     base64.StdEncoding.EncodeToString(newBinaryHeader),
-			"keyversion": p.LatestVersion,
+			"headers":        result.Headers,
+			"latest_version": result.LatestVersion,
 		},
 	}, nil
 }
@@ -344,12 +359,36 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	}
 
 	// Header was successfully decrypted, add it to the database
+	newHeader := reencryptFileEntry{
+		Header:     header, // header stored in base64 format
+		Keyversion: p.LatestVersion,
+		Added:      time.Now(),
+	}
+
+	// Get old headers if they exist
 	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
-	entry, err := logical.StorageEntryJSON(filePath, map[string]interface{}{
-		"header":     header, // header stored in base64 format
-		"keyversion": p.LatestVersion,
-		"added":      time.Now(),
-	})
+	oldEntry, err := req.Storage.Get(ctx, filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var entry *logical.StorageEntry
+	if oldEntry == nil {
+		entry, err = logical.StorageEntryJSON(filePath, fileEntryMap{
+			Headers:       map[string]reencryptFileEntry{"1": newHeader},
+			LatestVersion: 1,
+		})
+	} else {
+		var files fileEntryMap
+		if err = oldEntry.DecodeJSON(&files); err != nil {
+			return nil, err
+		}
+		files.Headers[strconv.Itoa(files.LatestVersion+1)] = newHeader
+		entry, err = logical.StorageEntryJSON(filePath, fileEntryMap{
+			Headers:       files.Headers,
+			LatestVersion: files.LatestVersion + 1,
+		})
+	}
 
 	if err != nil {
 		return nil, err

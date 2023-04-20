@@ -95,47 +95,53 @@ func (b *c4ghTransitBackend) pathRewrapWrite(ctx context.Context, req *logical.R
 				continue
 			}
 
-			var result reencryptFileEntry
+			var result fileEntryMap
 			if err := entry.DecodeJSON(&result); err != nil {
 				return nil, err
 			}
-			if result.Keyversion == p.LatestVersion {
-				continue
+
+			for k, v := range result.Headers {
+				if v.Keyversion == p.LatestVersion {
+					continue
+				}
+
+				headerBytes, err := base64.StdEncoding.DecodeString(v.Header)
+				if err != nil {
+					return nil, err
+				}
+
+				key, err := p.GetKey(nil, v.Keyversion, p.KeySize)
+				if err != nil {
+					return nil, err
+				}
+				if key == nil {
+					return logical.ErrorResponse("Key version %s not found.", v.Keyversion), nil
+				}
+
+				// Copy the key to a fixed length array since NewHeader is picky
+				var privkey [chacha20poly1305.KeySize]byte
+				keys.PrivateKeyToCurve25519(&privkey, key)
+
+				newBinaryHeader, err := headers.ReEncryptHeader(headerBytes, privkey, [][chacha20poly1305.KeySize]byte{c4ghPublicKey})
+				if err != nil {
+					return nil, err
+				}
+
+				// Update header after it was successfully decrypted
+				result.Headers[k] = reencryptFileEntry{
+					Header:     base64.StdEncoding.EncodeToString(newBinaryHeader),
+					Keyversion: p.LatestVersion,
+					Added:      time.Now(),
+				}
 			}
 
-			headerBytes, err := base64.StdEncoding.DecodeString(result.Header)
+			// Add rewrapped headers to the database
+			newEntry, err := logical.StorageEntryJSON(filePath, result)
 			if err != nil {
 				return nil, err
 			}
 
-			key, err := p.GetKey(nil, result.Keyversion, p.KeySize)
-			if err != nil {
-				return nil, err
-			}
-			if key == nil {
-				return logical.ErrorResponse("Key version %d not found.", result.Keyversion), nil
-			}
-
-			// Copy the key to a fixed length array since NewHeader is picky
-			var privkey [chacha20poly1305.KeySize]byte
-			keys.PrivateKeyToCurve25519(&privkey, key)
-
-			newBinaryHeader, err := headers.ReEncryptHeader(headerBytes, privkey, [][chacha20poly1305.KeySize]byte{c4ghPublicKey})
-			if err != nil {
-				return nil, err
-			}
-
-			// Header was successfully decrypted, add it to the database
-			entry, err = logical.StorageEntryJSON(filePath, map[string]interface{}{
-				"header":     base64.StdEncoding.EncodeToString(newBinaryHeader), // header stored in base64 format
-				"keyversion": p.LatestVersion,
-				"added":      time.Now(),
-			})
-
-			if err != nil {
-				return nil, err
-			}
-			if err := req.Storage.Put(ctx, entry); err != nil {
+			if err := req.Storage.Put(ctx, newEntry); err != nil {
 				return nil, err
 			}
 		}
