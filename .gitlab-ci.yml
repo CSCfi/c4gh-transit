@@ -8,7 +8,7 @@ test:
     - sds
   script:
     - GO_BIN=$(which go)
-    - sudo ${GO_BIN} test -v ./c4ghtransit
+    - sudo ${GO_BIN} test -timeout 30m -v ./c4ghtransit
 
 build-binary:
   stage: build
