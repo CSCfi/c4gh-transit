@@ -33,7 +33,7 @@ func main() {
 		BackendFactoryFunc: c4ghtransit.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
-		
+
 		logger.Error("plugin shutting down", "error", err)
 		os.Exit(1)
 	}

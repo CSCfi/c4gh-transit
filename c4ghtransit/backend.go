@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type c4ghTransitBackend struct {
+type C4ghBackend struct {
 	*framework.Backend
 	lm                   *keysutil.LockManager
 	configMutex          sync.RWMutex
@@ -36,11 +36,12 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
+
 	return b, nil
 }
 
-func Backend(ctx context.Context, conf *logical.BackendConfig) (*c4ghTransitBackend, error) {
-	var b c4ghTransitBackend
+func Backend(ctx context.Context, conf *logical.BackendConfig) (*C4ghBackend, error) {
+	var b C4ghBackend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 		PathsSpecial: &logical.Paths{
@@ -68,6 +69,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*c4ghTransitBack
 			b.pathBackup(),
 			b.pathBackupList(),
 			b.pathRestore(),
+			b.pathCacheConfig(),
 			b.pathRewrap(),
 		},
 
@@ -119,10 +121,11 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 		}
 		size = storedCache.Size
 	}
+
 	return size, nil
 }
 
-func (b *c4ghTransitBackend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, rand io.Reader) (retP *keysutil.Policy, retUpserted bool, retErr error) {
+func (b *C4ghBackend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, rand io.Reader) (retP *keysutil.Policy, retUpserted bool, retErr error) {
 	b.configMutex.RLock()
 	//nolint:nestif
 	if b.lm.GetUseCache() && b.cacheSizeChanged {
@@ -131,12 +134,14 @@ func (b *c4ghTransitBackend) GetPolicy(ctx context.Context, polReq keysutil.Poli
 		storedCacheSize, err := GetCacheSizeFromStorage(ctx, polReq.Storage)
 		if err != nil {
 			b.configMutex.RUnlock()
+
 			return nil, false, err
 		}
 		if currentCacheSize != storedCacheSize {
 			err = b.lm.InitCache(storedCacheSize)
 			if err != nil {
 				b.configMutex.RUnlock()
+
 				return nil, false, err
 			}
 		}
@@ -152,10 +157,11 @@ func (b *c4ghTransitBackend) GetPolicy(ctx context.Context, polReq keysutil.Poli
 	if err != nil {
 		return p, false, err
 	}
+
 	return p, true, nil
 }
 
-func (b *c4ghTransitBackend) invalidate(ctx context.Context, key string) {
+func (b *C4ghBackend) invalidate(ctx context.Context, key string) {
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("invalidating key", "key", key)
 	}
@@ -173,7 +179,7 @@ func (b *c4ghTransitBackend) invalidate(ctx context.Context, key string) {
 
 // periodicFunc is a central collection of functions that run on an interval.
 // Anything that should be called regularly can be placed within this method.
-func (b *c4ghTransitBackend) periodicFunc(ctx context.Context, req *logical.Request) error {
+func (b *C4ghBackend) periodicFunc(ctx context.Context, req *logical.Request) error {
 	// These operations ensure the auto-rotate only happens once simultaneously. It's an unlikely edge
 	// given the time scale, but a safeguard nonetheless.
 	var err error
@@ -193,7 +199,7 @@ func (b *c4ghTransitBackend) periodicFunc(ctx context.Context, req *logical.Requ
 // autoRotateKeys retrieves all transit keys and rotates those which have an
 // auto rotate period defined which has passed. This operation only happens
 // on primary nodes and performance secondary nodes which have a local mount.
-func (b *c4ghTransitBackend) autoRotateKeys(ctx context.Context, req *logical.Request) error {
+func (b *C4ghBackend) autoRotateKeys(ctx context.Context, req *logical.Request) error {
 	// Only check for autorotation once a day to avoid unnecessarily iterating
 	// over all keys too frequently.
 	if time.Now().Before(b.checkAutoRotateAfter) {
@@ -224,6 +230,7 @@ func (b *c4ghTransitBackend) autoRotateKeys(ctx context.Context, req *logical.Re
 		}, b.GetRandomReader())
 		if err != nil {
 			errs = multierror.Append(errs, err)
+
 			continue
 		}
 
@@ -242,7 +249,7 @@ func (b *c4ghTransitBackend) autoRotateKeys(ctx context.Context, req *logical.Re
 }
 
 // rotateIfRequired rotates a key if it is due for autorotation.
-func (b *c4ghTransitBackend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) error {
+func (b *C4ghBackend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) error {
 	if !b.System().CachingDisabled() {
 		p.Lock(true)
 	}
@@ -265,9 +272,11 @@ func (b *c4ghTransitBackend) rotateIfRequired(ctx context.Context, req *logical.
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("automatically rotating key", "key", key)
 		}
+
 		return p.Rotate(ctx, req.Storage, b.GetRandomReader())
 
 	}
+
 	return nil
 }
 

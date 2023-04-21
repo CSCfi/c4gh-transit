@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *c4ghTransitBackend) pathCacheConfig() *framework.Path {
+func (b *C4ghBackend) pathCacheConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "cache-config",
 		Fields: map[string]*framework.FieldSchema{
@@ -42,7 +42,7 @@ func (b *c4ghTransitBackend) pathCacheConfig() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathCacheConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathCacheConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// get target size
 	cacheSize := d.Get("size").(int)
 	if cacheSize != 0 && cacheSize < minCacheSize {
@@ -72,7 +72,7 @@ type configCache struct {
 	Size int `json:"size"`
 }
 
-func (b *c4ghTransitBackend) pathCacheConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathCacheConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// error if no cache is configured
 	if !b.lm.GetUseCache() {
 		return nil, errors.New(

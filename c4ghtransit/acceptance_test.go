@@ -264,6 +264,7 @@ func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string,
 			assert.Equal(t, resp.Data["project"], project, fmt.Sprintf("Response did not contain expected project: %s", resp.Data))
 			assert.Equal(t, resp.Data["service"], service, fmt.Sprintf("Response did not contain expected service: %s", resp.Data))
 			assert.Equal(t, resp.Data["name"], keyName, fmt.Sprintf("Response did not contain expected key name: %s", resp.Data))
+
 			return err
 		},
 	}
@@ -282,11 +283,13 @@ func testC4ghStepwiseWriteFile(t *testing.T, project, container, path string, ot
 			encryptedHeader, encryptedBody, err := encryptFile(projectKey, byteContent)
 			if err != nil {
 				fmt.Println("Failed encrypting file: ", err)
+
 				return nil, err
 			}
 			if len(otherContent) == 0 {
 				encryptedFiles[path] = encryptedBody
 			}
+
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
 		Assert: func(resp *api.Secret, err error) error {
@@ -352,9 +355,11 @@ func testC4ghStepwiseWriteFileFail(t *testing.T, project, container, path string
 			encryptedHeader, encryptedBody, err := encryptFile(oldKey, []byte(content))
 			if err != nil {
 				fmt.Println("Failed encrypting file: ", err)
+
 				return nil, err
 			}
 			encryptedFiles[path] = encryptedBody
+
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
 		Assert: func(resp *api.Secret, err error) error {

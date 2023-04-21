@@ -16,7 +16,7 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-func (b *c4ghTransitBackend) pathRewrap() *framework.Path {
+func (b *C4ghBackend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
@@ -35,7 +35,7 @@ func (b *c4ghTransitBackend) pathRewrap() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	project := d.Get("project").(string)
 	listPath := fmt.Sprintf("files/%s/", project)
 	containers, err := req.Storage.List(ctx, listPath)
