@@ -72,7 +72,7 @@ type configCache struct {
 	Size int `json:"size"`
 }
 
-func (b *C4ghBackend) pathCacheConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathCacheConfigRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	// error if no cache is configured
 	if !b.lm.GetUseCache() {
 		return nil, errors.New(

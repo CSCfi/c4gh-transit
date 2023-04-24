@@ -226,7 +226,7 @@ func (b *C4ghBackend) pathKeyRead(
 func (b *C4ghBackend) pathListKeys(
 	ctx context.Context,
 	req *logical.Request,
-	d *framework.FieldData,
+	_ *framework.FieldData,
 ) (*logical.Response, error) {
 	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {

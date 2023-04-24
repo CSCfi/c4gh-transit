@@ -40,7 +40,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
-func Backend(ctx context.Context, conf *logical.BackendConfig) (*C4ghBackend, error) {
+func Backend(_ context.Context, _ *logical.BackendConfig) (*C4ghBackend, error) {
 	var b C4ghBackend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -161,7 +161,7 @@ func (b *C4ghBackend) GetPolicy(ctx context.Context, polReq keysutil.PolicyReque
 	return p, true, nil
 }
 
-func (b *C4ghBackend) invalidate(ctx context.Context, key string) {
+func (b *C4ghBackend) invalidate(_ context.Context, key string) {
 	if b.Logger().IsDebug() {
 		b.Logger().Debug("invalidating key", "key", key)
 	}

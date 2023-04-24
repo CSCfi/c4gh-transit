@@ -270,7 +270,7 @@ func testC4ghStepwiseReadWhitelist(t *testing.T, project string, service string,
 	}
 }
 
-func testC4ghStepwiseWriteFile(t *testing.T, project, container, path string, otherContent ...string) stepwise.Step {
+func testC4ghStepwiseWriteFile(_ *testing.T, project, container, path string, otherContent ...string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteFile",
 		Operation: stepwise.WriteOperation,
@@ -346,7 +346,7 @@ func testC4ghStepwiseReadFile(t *testing.T, project string, container string, pa
 	}
 }
 
-func testC4ghStepwiseWriteFileFail(t *testing.T, project, container, path string) stepwise.Step {
+func testC4ghStepwiseWriteFileFail(_ *testing.T, project, container, path string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteFileFail",
 		Operation: stepwise.WriteOperation,
