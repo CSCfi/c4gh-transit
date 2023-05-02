@@ -1,9 +1,55 @@
 stages:
+  - lint
   - test
   - build
 
+.go-cache:
+  variables:
+    GOPATH: $CI_PROJECT_DIR/.go
+    GOCACHE: $CI_PROJECT_DIR/.go-build
+
+lint:
+  stage: lint
+  extends: .go-cache
+  variables:
+    GOLANGCI_LINT_CACHE: $CI_PROJECT_DIR/.cache
+  rules:
+    # We don't run on tags and default branch
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: never
+    - if: "$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS"
+      when: never
+    - if: '$CI_COMMIT_TAG !~ "/^$/"'
+      when: never
+  tags:
+    - sds
+  script:
+    - mkdir -p .cache
+    - golangci-lint run -v ./... --timeout 10m -E bodyclose,gocritic,gofmt,gosec,govet,nestif,nlreturn,revive,rowserrcheck --exclude G401,G501,G107 --out-format code-climate | tee gl-code-quality-report.json
+    - go fmt ./...
+    - go vet ./...
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+  after_script:
+    - sudo rm -rf .go/pkg
+
 test:
   stage: test
+  rules:
+    # We don't run on tags and default branch
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: never
+    - if: "$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS"
+      when: never
+    - if: '$CI_COMMIT_TAG !~ "/^$/"'
+      when: never
   tags:
     - sds
   script:

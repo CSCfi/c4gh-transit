@@ -28,7 +28,7 @@ type fileEntryMap struct {
 }
 
 // pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
-func (b *c4ghTransitBackend) pathFiles() *framework.Path {
+func (b *C4ghBackend) pathFiles() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
 		Fields: map[string]*framework.FieldSchema{
@@ -83,7 +83,7 @@ func (b *c4ghTransitBackend) pathFiles() *framework.Path {
 }
 
 // List stored file containers
-func (b *c4ghTransitBackend) pathListContainers() *framework.Path {
+func (b *C4ghBackend) pathListContainers() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -104,7 +104,7 @@ func (b *c4ghTransitBackend) pathListContainers() *framework.Path {
 }
 
 // List containers
-func (b *c4ghTransitBackend) pathListFiles() *framework.Path {
+func (b *C4ghBackend) pathListFiles() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -129,7 +129,7 @@ func (b *c4ghTransitBackend) pathListFiles() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathContainersList(
+func (b *C4ghBackend) pathContainersList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -148,7 +148,7 @@ func (b *c4ghTransitBackend) pathContainersList(
 }
 
 // List all headers uploaded to a specific project
-func (b *c4ghTransitBackend) pathFilesList(
+func (b *C4ghBackend) pathFilesList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -175,7 +175,7 @@ func (b *c4ghTransitBackend) pathFilesList(
 }
 
 // Read a re-encrypted header
-func (b *c4ghTransitBackend) pathFilesRead(
+func (b *C4ghBackend) pathFilesRead(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -244,6 +244,7 @@ func (b *c4ghTransitBackend) pathFilesRead(
 		decHeader, err := base64.StdEncoding.DecodeString(v.Header)
 		if err != nil {
 			fmt.Println("decode error:", err)
+
 			return logical.ErrorResponse("Incorrectly formed header version %s.", k), nil
 		}
 		binaryHeader, err := headers.ReadHeader(bytes.NewReader(decHeader))
@@ -284,7 +285,7 @@ func (b *c4ghTransitBackend) pathFilesRead(
 }
 
 // Write a header encrypted with a key known to the plugin
-func (b *c4ghTransitBackend) pathFilesWrite(
+func (b *C4ghBackend) pathFilesWrite(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -322,31 +323,31 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	keys.PrivateKeyToCurve25519(&privkey, key)
 
 	fmt.Println("Decoding base64 header")
-	header_bytes, err := base64.StdEncoding.DecodeString(header)
+	headerBytes, err := base64.StdEncoding.DecodeString(header)
 	if err != nil {
 		return nil, err
 	}
 
 	// Try decrypting the header with the latest key
 	fmt.Println("Trying to read the header")
-	header_reader := bytes.NewReader(header_bytes)
-	binary_header, err := headers.ReadHeader(header_reader)
+	headerReader := bytes.NewReader(headerBytes)
+	binaryHeader, err := headers.ReadHeader(headerReader)
 	if err != nil {
 		return nil, err
 	}
 
 	fmt.Println("Trying to decrypt the binary header reader")
-	buffer := bytes.NewBuffer(binary_header)
-	header_parsed, err := headers.NewHeader(buffer, privkey)
+	buffer := bytes.NewBuffer(binaryHeader)
+	headerParsed, err := headers.NewHeader(buffer, privkey)
 	if err != nil {
 		return nil, err
 	}
 
-	if header_parsed == nil {
+	if headerParsed == nil {
 		return logical.ErrorResponse("Could not decrypt header with the latest private key."), nil
 	}
 
-	dataEncryptionParametersHeaderPackets, err := header_parsed.GetDataEncryptionParameterHeaderPackets()
+	dataEncryptionParametersHeaderPackets, err := headerParsed.GetDataEncryptionParameterHeaderPackets()
 	if err != nil {
 		return nil, err
 	}
@@ -397,11 +398,12 @@ func (b *c4ghTransitBackend) pathFilesWrite(
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
 // Write a header encrypted with a key known to the plugin
-func (b *c4ghTransitBackend) pathFilesUpdate(
+func (b *C4ghBackend) pathFilesUpdate(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -410,7 +412,7 @@ func (b *c4ghTransitBackend) pathFilesUpdate(
 }
 
 // Delete an encryption header from storage
-func (b *c4ghTransitBackend) pathFilesDelete(
+func (b *C4ghBackend) pathFilesDelete(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,

@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func (b *c4ghTransitBackend) pathRotate() *framework.Path {
+func (b *C4ghBackend) pathRotate() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/rotate",
 		Fields: map[string]*framework.FieldSchema{
@@ -27,7 +27,7 @@ func (b *c4ghTransitBackend) pathRotate() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathRotateWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathRotateWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 
 	// Get the policy
@@ -49,6 +49,7 @@ func (b *c4ghTransitBackend) pathRotateWrite(ctx context.Context, req *logical.R
 	err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 
 	p.Unlock()
+
 	return nil, err
 }
 

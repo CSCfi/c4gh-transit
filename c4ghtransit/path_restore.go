@@ -28,7 +28,7 @@ type WhitelistData struct {
 	Time        time.Time                          `json:"backup_time"`
 }
 
-func (b *c4ghTransitBackend) pathRestore() *framework.Path {
+func (b *C4ghBackend) pathRestore() *framework.Path {
 	return &framework.Path{
 		Pattern: "restore/" + framework.GenericNameRegex("type") + framework.OptionalParamRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
@@ -60,7 +60,7 @@ func (b *c4ghTransitBackend) pathRestore() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	backupB64 := d.Get("backup").(string)
 	contentType := d.Get("type").(string)
 	force := d.Get("force").(bool)
@@ -87,7 +87,7 @@ func (b *c4ghTransitBackend) pathRestoreUpdate(ctx context.Context, req *logical
 	}
 }
 
-func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.Storage, project, backup string, force bool) (*logical.Response, error) {
+func (b *C4ghBackend) restoreFile(ctx context.Context, storage logical.Storage, project, backup string, force bool) (*logical.Response, error) {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return nil, err
@@ -144,6 +144,7 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 			}
 			if entry != nil && !force {
 				resp.AddWarning(fmt.Sprintf("file %s already exists", filePath))
+
 				continue
 			}
 
@@ -164,7 +165,7 @@ func (b *c4ghTransitBackend) restoreFile(ctx context.Context, storage logical.St
 	return resp, nil
 }
 
-func (b *c4ghTransitBackend) restoreWhitelist(ctx context.Context, storage logical.Storage, project, backup string, force bool) (*logical.Response, error) {
+func (b *C4ghBackend) restoreWhitelist(ctx context.Context, storage logical.Storage, project, backup string, force bool) (*logical.Response, error) {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
 		return nil, err
@@ -192,6 +193,7 @@ func (b *c4ghTransitBackend) restoreWhitelist(ctx context.Context, storage logic
 		}
 		if entry != nil && !force {
 			resp.AddWarning(fmt.Sprintf("project %s already has whitelisted key named %s for service %s", project, data.Name, data.Service))
+
 			continue
 		}
 

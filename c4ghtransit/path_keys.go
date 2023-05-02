@@ -17,7 +17,7 @@ import (
 
 // pathKeys extends the Vault API with a "/keys"
 // endpoint.
-func (b *c4ghTransitBackend) pathKeys() *framework.Path {
+func (b *C4ghBackend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
@@ -52,7 +52,7 @@ of rotation needs to be at least one day, or 86400 seconds.`,
 	}
 }
 
-func (b *c4ghTransitBackend) pathKeysList() *framework.Path {
+func (b *C4ghBackend) pathKeysList() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -66,7 +66,7 @@ func (b *c4ghTransitBackend) pathKeysList() *framework.Path {
 }
 
 // Create a new key
-func (b *c4ghTransitBackend) pathKeyUpdate(
+func (b *C4ghBackend) pathKeyUpdate(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -115,8 +115,10 @@ func (b *c4ghTransitBackend) pathKeyUpdate(
 	resp := &logical.Response{}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", project))
+
 		return resp, nil
 	}
+
 	return nil, nil
 }
 
@@ -129,7 +131,7 @@ type pubKeyRet struct {
 }
 
 // Display key metadata, e.g. expiration, public key entry
-func (b *c4ghTransitBackend) pathKeyRead(
+func (b *C4ghBackend) pathKeyRead(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -221,10 +223,10 @@ func (b *c4ghTransitBackend) pathKeyRead(
 }
 
 // List provided keys
-func (b *c4ghTransitBackend) pathListKeys(
+func (b *C4ghBackend) pathListKeys(
 	ctx context.Context,
 	req *logical.Request,
-	d *framework.FieldData,
+	_ *framework.FieldData,
 ) (*logical.Response, error) {
 	entries, err := req.Storage.List(ctx, "policy/")
 	if err != nil {

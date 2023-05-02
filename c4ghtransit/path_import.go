@@ -14,9 +14,8 @@ import (
 )
 
 const ed25519 = "ed25519"
-const crypt4gh = "crypt4gh"
 
-func (b *c4ghTransitBackend) pathImport() *framework.Path {
+func (b *C4ghBackend) pathImport() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/import",
 		Fields: map[string]*framework.FieldSchema{
@@ -65,7 +64,7 @@ of rotation needs to be at least one day, or 86400 seconds.`,
 	}
 }
 
-func (b *c4ghTransitBackend) pathImportWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathImportWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	flavor := d.Get("flavor").(string)
 	cipherTextStr := d.Get("ciphertext").(string)
@@ -107,6 +106,7 @@ func (b *c4ghTransitBackend) pathImportWrite(ctx context.Context, req *logical.R
 		if b.System().CachingDisabled() {
 			p.Unlock()
 		}
+
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
@@ -129,10 +129,3 @@ const (
 		"key into Vault. The import operation creates a new key and cannot be used to " +
 		"replace an existing key."
 )
-
-const pathImportVersionWriteSyn = "Imports an externally-generated key into an " +
-	"existing imported key"
-
-const pathImportVersionWriteDesc = "This path is used to import a new version of an " +
-	"externally-generated key into an existing import key. The import_version endpoint " +
-	"only supports importing key material into existing imported keys."

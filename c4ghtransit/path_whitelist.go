@@ -12,10 +12,6 @@ import (
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-const (
-	whitelistStoragePath = "whitelist"
-)
-
 type transitWhitelistEntry struct {
 	Key     string `json:"key"`
 	Flavor  string `json:"flavor"`
@@ -26,7 +22,7 @@ type transitWhitelistEntry struct {
 
 // pathWhitelist extends the Vault API with a "/whitelist"
 // endpoint for adding whitelisted public keys for transit.
-func (b *c4ghTransitBackend) pathWhitelist() *framework.Path {
+func (b *C4ghBackend) pathWhitelist() *framework.Path {
 	return &framework.Path{
 		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("service") + "/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -75,7 +71,7 @@ func (b *c4ghTransitBackend) pathWhitelist() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathListServices() *framework.Path {
+func (b *C4ghBackend) pathListServices() *framework.Path {
 	return &framework.Path{
 		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -95,7 +91,7 @@ func (b *c4ghTransitBackend) pathListServices() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathListWhitelistedKeys() *framework.Path {
+func (b *C4ghBackend) pathListWhitelistedKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "whitelist/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("service") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -121,7 +117,7 @@ func (b *c4ghTransitBackend) pathListWhitelistedKeys() *framework.Path {
 }
 
 // List whitelisted keys in Vault storage
-func (b *c4ghTransitBackend) pathServicesList(
+func (b *C4ghBackend) pathServicesList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -137,7 +133,7 @@ func (b *c4ghTransitBackend) pathServicesList(
 }
 
 // List all keys uploaded to a specific service
-func (b *c4ghTransitBackend) pathWhitelistedKeysList(
+func (b *C4ghBackend) pathWhitelistedKeysList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -155,7 +151,7 @@ func (b *c4ghTransitBackend) pathWhitelistedKeysList(
 }
 
 // Read a public key from Vault storage
-func (b *c4ghTransitBackend) pathWhitelistRead(
+func (b *C4ghBackend) pathWhitelistRead(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -188,7 +184,7 @@ func (b *c4ghTransitBackend) pathWhitelistRead(
 }
 
 // Write a public key into Vault storage
-func (b *c4ghTransitBackend) pathWhitelistWrite(
+func (b *C4ghBackend) pathWhitelistWrite(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -247,11 +243,12 @@ func (b *c4ghTransitBackend) pathWhitelistWrite(
 	if err := req.Storage.Put(ctx, entry); err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
 // Delete a public key from Vault storage
-func (b *c4ghTransitBackend) pathWhitelistDelete(
+func (b *C4ghBackend) pathWhitelistDelete(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -265,6 +262,7 @@ func (b *c4ghTransitBackend) pathWhitelistDelete(
 	if err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 

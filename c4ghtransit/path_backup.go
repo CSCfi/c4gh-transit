@@ -24,7 +24,7 @@ type transitWhitelistEntrySansProject struct {
 	Name    string `json:"name"`
 }
 
-func (b *c4ghTransitBackend) pathBackup() *framework.Path {
+func (b *C4ghBackend) pathBackup() *framework.Path {
 	return &framework.Path{
 		Pattern: "backup/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("project"),
 		Fields: map[string]*framework.FieldSchema{
@@ -47,14 +47,14 @@ func (b *c4ghTransitBackend) pathBackup() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathBackupList() *framework.Path {
+func (b *C4ghBackend) pathBackupList() *framework.Path {
 	return &framework.Path{
 		Pattern: "backup/" + framework.GenericNameRegex("type") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"type": {
 				Type:        framework.TypeString,
 				Description: "'keys' or 'files' if user wishes to list projects with keys or files stored.",
-				Required: true,
+				Required:    true,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -67,7 +67,7 @@ func (b *c4ghTransitBackend) pathBackupList() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathListBackups(
+func (b *C4ghBackend) pathListBackups(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -76,28 +76,28 @@ func (b *c4ghTransitBackend) pathListBackups(
 
 	switch contentType {
 	case "files":
-		listPath := fmt.Sprintf("files/")
+		listPath := "files/"
 
 		entries, err := req.Storage.List(ctx, listPath)
-	
+
 		if err != nil {
 			return nil, err
 		}
-	
+
 		return logical.ListResponse(entries), nil
 	case "keys":
 		entries, err := req.Storage.List(ctx, "policy/")
 		if err != nil {
 			return nil, err
 		}
-	
+
 		return logical.ListResponse(entries), nil
 	default:
 		return logical.ErrorResponse("Backup listing type not supported."), nil
 	}
 }
 
-func (b *c4ghTransitBackend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *C4ghBackend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	contentType := d.Get("type").(string)
 	project := d.Get("project").(string)
 
@@ -125,7 +125,7 @@ func (b *c4ghTransitBackend) pathBackupRead(ctx context.Context, req *logical.Re
 	}, nil
 }
 
-func (b *c4ghTransitBackend) backupFile(ctx context.Context, storage logical.Storage, project string) (string, error) {
+func (b *C4ghBackend) backupFile(ctx context.Context, storage logical.Storage, project string) (string, error) {
 	listPath := fmt.Sprintf("files/%s/", project)
 	containers, err := storage.List(ctx, listPath)
 	if err != nil {
@@ -185,7 +185,7 @@ func (b *c4ghTransitBackend) backupFile(ctx context.Context, storage logical.Sto
 	return base64.StdEncoding.EncodeToString(encodedBackup), nil
 }
 
-func (b *c4ghTransitBackend) backupWhitelist(ctx context.Context, storage logical.Storage, project string) (string, error) {
+func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Storage, project string) (string, error) {
 	listPath := fmt.Sprintf("whitelist/%s/", project)
 	services, err := storage.List(ctx, listPath)
 	if err != nil {
