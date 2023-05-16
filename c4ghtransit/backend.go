@@ -72,7 +72,7 @@ func Backend(_ context.Context, _ *logical.BackendConfig) (*C4ghBackend, error) 
 			b.pathCacheConfig(),
 			b.pathRewrap(),
 			b.pathSharingContainers(),
-			b.pathSharingFiles(),
+			// b.pathSharingFiles(),
 			b.pathSharingList(),
 			b.pathSharingContainerList(),
 			b.pathSharingFileList(),

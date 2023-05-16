@@ -19,7 +19,7 @@ type transitSharingWhitelistEntry struct {
 
 // pathSharing adds functionality to whitelist specific projects with rights
 // to ask for re-encrypted headers for specific files, folders or projects
-func (b *c4ghTransitBackend) pathSharingContainers() *framework.Path {
+func (b *C4ghBackend) pathSharingContainers() *framework.Path {
 	return &framework.Path{
 		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container"),
 		Fields: map[string]*framework.FieldSchema{
@@ -63,7 +63,7 @@ func (b *c4ghTransitBackend) pathSharingContainers() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathSharingFiles() *framework.Path {
+func (b *C4ghBackend) pathSharingFiles() *framework.Path {
 	return &framework.Path{
 		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
 		Fields: map[string]*framework.FieldSchema{
@@ -112,7 +112,7 @@ func (b *c4ghTransitBackend) pathSharingFiles() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathSharingList() *framework.Path {
+func (b *C4ghBackend) pathSharingList() *framework.Path {
 	return &framework.Path{
 		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -132,9 +132,9 @@ func (b *c4ghTransitBackend) pathSharingList() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathSharingContainerList() *framework.Path {
+func (b *C4ghBackend) pathSharingContainerList() *framework.Path {
 	return &framework.Path{
-		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
+		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -157,9 +157,9 @@ func (b *c4ghTransitBackend) pathSharingContainerList() *framework.Path {
 	}
 }
 
-func (b *c4ghTransitBackend) pathSharingFileList() *framework.Path {
+func (b *C4ghBackend) pathSharingFileList() *framework.Path {
 	return &framework.Path{
-		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
+		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -188,7 +188,7 @@ func (b *c4ghTransitBackend) pathSharingFileList() *framework.Path {
 }
 
 // List containers containing whitelist in project
-func (b *c4ghTransitBackend) pathSharingListList(
+func (b *C4ghBackend) pathSharingListList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -204,7 +204,7 @@ func (b *c4ghTransitBackend) pathSharingListList(
 }
 
 // List files containing whitelist entry in container
-func (b *c4ghTransitBackend) pathSharingContainerListList(
+func (b *C4ghBackend) pathSharingContainerListList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -221,7 +221,7 @@ func (b *c4ghTransitBackend) pathSharingContainerListList(
 }
 
 // List whitelisted projects for a file
-func (b *c4ghTransitBackend) pathSharingFileListList(
+func (b *C4ghBackend) pathSharingFileListList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -229,7 +229,7 @@ func (b *c4ghTransitBackend) pathSharingFileListList(
 	project := d.Get("project").(string)
 	container := d.Get("container").(string)
 	file := d.Get("file").(string)
-	listPath := fmt.Sprintf("sharing/%s/%s/%s", project, container, file)
+	listPath := fmt.Sprintf("sharing/%s/%s/%s/", project, container, file)
 	entries, err := req.Storage.List(ctx, listPath)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func (b *c4ghTransitBackend) pathSharingFileListList(
 }
 
 // Read a whitelisted project details
-func (b *c4ghTransitBackend) pathSharingRead(
+func (b *C4ghBackend) pathSharingRead(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -269,7 +269,7 @@ func (b *c4ghTransitBackend) pathSharingRead(
 }
 
 // Add a project to container whitelist
-func (b *c4ghTransitBackend) pathSharingWrite(
+func (b *C4ghBackend) pathSharingWrite(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -297,7 +297,7 @@ func (b *c4ghTransitBackend) pathSharingWrite(
 }
 
 // Remove a project from container whitelist
-func (b *c4ghTransitBackend) pathSharingDelete(
+func (b *C4ghBackend) pathSharingDelete(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -315,7 +315,7 @@ func (b *c4ghTransitBackend) pathSharingDelete(
 }
 
 // Read whitelisted project details for a file
-func (b *c4ghTransitBackend) pathFileSharingRead(
+func (b *C4ghBackend) pathFileSharingRead(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -347,7 +347,7 @@ func (b *c4ghTransitBackend) pathFileSharingRead(
 }
 
 // Add a whitelisted project for a file
-func (b *c4ghTransitBackend) pathFileSharingWrite(
+func (b *C4ghBackend) pathFileSharingWrite(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -376,7 +376,7 @@ func (b *c4ghTransitBackend) pathFileSharingWrite(
 }
 
 // Remove a whitelisted project for a file
-func (b *c4ghTransitBackend) pathFileSharingDelete(
+func (b *C4ghBackend) pathFileSharingDelete(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,

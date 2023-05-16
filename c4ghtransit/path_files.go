@@ -63,9 +63,10 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Required:    true,
 			},
 			"owner": {
-				Type:		framework.TypeLowerCaseString,
+				Type:        framework.TypeLowerCaseString,
 				Description: "Project that owns the container (if the container is shared)",
-				Required:	false,
+				Default:     "",
+				Required:    false,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -193,18 +194,18 @@ func (b *C4ghBackend) pathFilesRead(
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
 	var useProject string
-	owner := d.Get("owner")
-	if owner != nil {
+	owner := d.Get("owner").(string)
+	if owner != "" {
 		// Check if the project exists in whitelist
-		listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
-		rawKeyEntry, err := req.Storage.Get(ctx, listPath)
+		// listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
+		rawKeyEntry, err := req.Storage.Get(ctx, "sharing/"+owner+"/"+container+"/"+project)
 		if err != nil {
 			return nil, err
 		}
 		if rawKeyEntry == nil {
 			return logical.ErrorResponse("no whitelisted project found"), nil
 		}
-		useProject = owner.(string)
+		useProject = owner
 	} else {
 		useProject = project
 	}
@@ -320,8 +321,8 @@ func (b *C4ghBackend) pathFilesWrite(
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
 	var useProject string
-	owner := d.Get("owner")
-	if owner != nil {
+	owner := d.Get("owner").(string)
+	if owner != "" {
 		// Check if the project exists in whitelist
 		listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
 		rawKeyEntry, err := req.Storage.Get(ctx, listPath)
@@ -331,7 +332,7 @@ func (b *C4ghBackend) pathFilesWrite(
 		if rawKeyEntry == nil {
 			return logical.ErrorResponse("no whitelisted project found"), nil
 		}
-		useProject = owner.(string)
+		useProject = owner
 	} else {
 		useProject = project
 	}
@@ -429,7 +430,7 @@ func (b *C4ghBackend) pathFilesWrite(
 			LatestVersion: files.LatestVersion + 1,
 		})
 	}
-	entry, err := logical.StorageEntryJSON(filePath, map[string]interface{}{
+	entry, err = logical.StorageEntryJSON(filePath, map[string]interface{}{
 		"header":     header, // header stored in base64 format
 		"keyversion": p.LatestVersion,
 		"added":      time.Now(),
