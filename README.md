@@ -8,21 +8,17 @@ as much of the original plugin code as possible.
 
 ## Download built binaries
 
-Each git tag triggers a release build that compiles and uploads binaries to Artifactory. 
+Each git tag triggers a release build that compiles and uploads binaries to configured binary repository. 
 
-There are compiled binaries available for alpine and other x86_64 linux systems from [`artifactory`](https://sds-docker.artifactory.ci.csc.fi/artifactory/webapp/#/artifacts/browse/tree/General/sds-generic-local/c4gh-transit/c4ghtransit-alpine).
-
-You can download the latest version here:
-- [Alpine](https://artifactory.ci.csc.fi/artifactory/sds-generic-local/c4gh-transit/c4ghtransit-alpine)
-- [Linux](https://artifactory.ci.csc.fi/artifactory/sds-generic-local/c4gh-transit/c4ghtransit)
+There are compiled binaries available for x86_64 linux systems from `Artifactory`, where you can download the latest version.
 
 Note that it requires authentication to download.
 
 ## Building
 The binary must be build for the platform it will run in.
-Even though that might be obvious, there is only Alpine official docker vault image.
-And building locally in a development machine will not be compatible with the 
-official image.
+Even though that might be obvious, there is only Alpine official docker vault image, see [source](https://github.com/hashicorp/vault/blob/main/scripts/docker/Dockerfile).
+And building locally in a development machine might not be compatible with the 
+official image, there to be wider compability diabling CGO is used in building.
 
 Note: the docker images will not cache dependencies and build assets over subsequent builds with the configuration given below.
 
