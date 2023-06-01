@@ -233,6 +233,8 @@ github.com/neicnordic/crypt4gh v1.7.3 h1:GUuutiuZjbAR+Ci4O5RTJBUMJXxncf+UHoE1W6F
 github.com/neicnordic/crypt4gh v1.7.3/go.mod h1:F6uTrg2YajFj2nyz1Kbdy2GQFqMstCmE85Q/iQCBH7E=
 github.com/neicnordic/crypt4gh v1.7.4 h1:ESa4uB0a+RJIIlz3XqUzQiviu8cJtmclU0IGvoX/HOc=
 github.com/neicnordic/crypt4gh v1.7.4/go.mod h1:1JZn346TxQFXzdbuEHQSzGOie05HNK4PrUB3l8PRO/w=
+github.com/neicnordic/crypt4gh v1.7.5 h1:cWAGSeQ1WJxMrnHb837UlZBwdAvEpceCPPorloqIv4w=
+github.com/neicnordic/crypt4gh v1.7.5/go.mod h1:M0r5/IDDpPZZ3qteae76Dvw0uS11Kw/Rg91dPcV4XPc=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=

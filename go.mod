@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/hashicorp/vault/sdk v0.9.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/neicnordic/crypt4gh v1.7.4
+	github.com/neicnordic/crypt4gh v1.7.5
 	golang.org/x/crypto v0.9.0
 	gotest.tools v2.2.0+incompatible
 )
