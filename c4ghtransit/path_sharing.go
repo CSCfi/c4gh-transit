@@ -8,13 +8,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const (
-	sharingStoragePath = "whitelist"
-)
-
 type transitSharingWhitelistEntry struct {
-	id         string `json:"id"`         // Project ID for sharing
-	idkeystone string `json:"idkeystone"` // Project name for sharing
+	ID         string `json:"id"`         // Project ID for sharing
+	IDKeystone string `json:"idkeystone"` // Project name for sharing
 }
 
 // pathSharing adds functionality to whitelist specific projects with rights
@@ -63,6 +59,7 @@ func (b *C4ghBackend) pathSharingContainers() *framework.Path {
 	}
 }
 
+//nolint:unused
 func (b *C4ghBackend) pathSharingFiles() *framework.Path {
 	return &framework.Path{
 		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
@@ -262,8 +259,8 @@ func (b *C4ghBackend) pathSharingRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":         result.id,
-			"idkeystone": result.idkeystone,
+			"id":         result.ID,
+			"idkeystone": result.IDKeystone,
 		},
 	}, nil
 }
@@ -311,10 +308,13 @@ func (b *C4ghBackend) pathSharingDelete(
 	if err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
 // Read whitelisted project details for a file
+//
+//nolint:unused
 func (b *C4ghBackend) pathFileSharingRead(
 	ctx context.Context,
 	req *logical.Request,
@@ -340,13 +340,15 @@ func (b *C4ghBackend) pathFileSharingRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"id":         result.id,
-			"idkeystone": result.idkeystone,
+			"id":         result.ID,
+			"idkeystone": result.IDKeystone,
 		},
 	}, nil
 }
 
 // Add a whitelisted project for a file
+//
+//nolint:unused
 func (b *C4ghBackend) pathFileSharingWrite(
 	ctx context.Context,
 	req *logical.Request,
@@ -376,6 +378,8 @@ func (b *C4ghBackend) pathFileSharingWrite(
 }
 
 // Remove a whitelisted project for a file
+//
+//nolint:unused
 func (b *C4ghBackend) pathFileSharingDelete(
 	ctx context.Context,
 	req *logical.Request,
@@ -392,6 +396,7 @@ func (b *C4ghBackend) pathFileSharingDelete(
 	if err != nil {
 		return nil, err
 	}
+
 	return nil, nil
 }
 
@@ -404,7 +409,7 @@ This access will allow the project to whitelist a key for purposes of downloadin
 	pathFileSharingHelpSynopsis    = `Manages project that are allowed to access whitelist on a file level, in addition to the project that owns the container`
 	pathFileSharingHelpDescription = `
 This path allows you to add projects to a whitelist, which specifies if they're allowed to access a file in a container owned by you.
-This access will allow the project to whitleist a key for purposes of downloading, and fetch the project public key for purposes of uploaing.
+This access will allow the project to whitelist a key for purposes of downloading, and fetch the project public key for purposes of uploaing.
 `
 	pathSharingListHelpSynopsis    = `List the whitelisted projects for specific project, container or file.`
 	pathSharingListHelpDescription = `Whitelisted project order is not specified.`

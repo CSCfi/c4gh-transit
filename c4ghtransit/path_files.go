@@ -430,11 +430,6 @@ func (b *C4ghBackend) pathFilesWrite(
 			LatestVersion: files.LatestVersion + 1,
 		})
 	}
-	entry, err = logical.StorageEntryJSON(filePath, map[string]interface{}{
-		"header":     header, // header stored in base64 format
-		"keyversion": p.LatestVersion,
-		"added":      time.Now(),
-	})
 
 	if err != nil {
 		return nil, err
