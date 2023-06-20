@@ -308,6 +308,7 @@ func (b *C4ghBackend) pathFilesBatchRead(
 					if nextResp != nil {
 						resps[string(decodedEntry)] = nextResp.Data
 					}
+
 					break
 				}
 			}
