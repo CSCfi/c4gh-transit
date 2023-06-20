@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -85,6 +87,42 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 		},
 		HelpSynopsis:    pathFilesHelpSynopsis,
 		HelpDescription: pathFilesHelpDescription,
+	}
+}
+
+// List stored file containers
+func (b *C4ghBackend) pathFilesBatch() *framework.Path {
+	return &framework.Path{
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
+		Fields: map[string]*framework.FieldSchema{
+			"project": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that the header is uploaded for",
+				Required:    true,
+			},
+			"batch": {
+				Type:        framework.TypeString,
+				Description: "JSON instructing which headers should be returned",
+				Required:    true,
+			},
+			"service": {
+				Type:        framework.TypeNameString,
+				Description: "Service that requests the file, matches the whitelist service name",
+				Required:    true,
+			},
+			"key": {
+				Type:        framework.TypeNameString,
+				Description: "Name of whitelisted key the service wants to use",
+				Required:    true,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathFilesBatchRead,
+			},
+		},
+		HelpSynopsis:    pathFilesBatchHelpSynopsis,
+		HelpDescription: pathFilesBatchHelpDescription,
 	}
 }
 
@@ -210,8 +248,105 @@ func (b *C4ghBackend) pathFilesRead(
 		useProject = project
 	}
 
-	// Open the old header
-	filePath := fmt.Sprintf("files/%s/%s/%s", useProject, container, file64)
+	return b.readFile(ctx, req, useProject, container, file64, service, keyName)
+}
+
+// Read a re-encrypted header
+func (b *C4ghBackend) pathFilesBatchRead(
+	ctx context.Context,
+	req *logical.Request,
+	d *framework.FieldData,
+) (*logical.Response, error) {
+	project := d.Get("project").(string)
+	service := d.Get("service").(string)
+	keyName := d.Get("key").(string)
+	batch := d.Get("batch").(string)
+	batch64, err := base64.StdEncoding.DecodeString(batch)
+	if err != nil {
+		return nil, err
+	}
+
+	var batchJSON map[string][]string
+	err = json.Unmarshal(batch64, &batchJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	var useProject string
+	owner := d.Get("owner").(string)
+	if owner != "" {
+		// Check if the project exists in whitelist
+		// listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
+		rawKeyEntry, err := req.Storage.Get(ctx, "sharing/"+owner+"/"+container+"/"+project)
+		if err != nil {
+			return nil, err
+		}
+		if rawKeyEntry == nil {
+			return logical.ErrorResponse("no whitelisted project found"), nil
+		}
+		useProject = owner
+	} else {
+		useProject = project
+	}
+
+	resp := &logical.Response{}
+	resp.Data = make(map[string]interface{})
+	for container := range batchJSON {
+		listPath := fmt.Sprintf("files/%s/%s/", useProject, container)
+		entries, err := req.Storage.List(ctx, listPath)
+		if err != nil {
+			return nil, err
+		}
+
+		found := make(map[string]bool)
+		for _, pattern := range batchJSON[container] {
+			found[pattern] = false
+		}
+
+		resps := []map[string]interface{}{}
+		for _, entry := range entries {
+			decodedEntry, err := base64.StdEncoding.DecodeString(entry)
+			if err != nil {
+				return nil, err
+			}
+			for _, pattern := range batchJSON[container] {
+				match, err := filepath.Match(pattern, string(decodedEntry))
+				if err != nil {
+					return nil, err
+				}
+				if match {
+					found[pattern] = true
+					nextResp, err := b.readFile(ctx, req, useProject, container, entry, service, keyName)
+					if err != nil {
+						return nil, err
+					}
+					if nextResp != nil {
+						resps = append(resps, map[string]interface{}{"filename": string(decodedEntry), "entry": nextResp.Data})
+					}
+					break
+				}
+			}
+		}
+
+		for f := range found {
+			if !found[f] {
+				resp.AddWarning(fmt.Sprintf("No matches found for %s in container %s", f, container))
+			}
+		}
+
+		resp.Data[container] = resps
+	}
+
+	return resp, nil
+}
+
+func (b *C4ghBackend) readFile(
+	ctx context.Context,
+	req *logical.Request,
+	project, container, file, service, keyName string,
+) (*logical.Response, error) {
+	// Open old headers
+	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file)
 	entry, err := req.Storage.Get(ctx, filePath)
 	if err != nil {
 		return nil, err
@@ -479,6 +614,8 @@ This path allows you to add file headers that are encrypted with a public key kn
 to this transit service. These headers can then be downloaded re-encrypted
 with a whitelisted key, or deleted permanently using this path.
 `
+	pathFilesBatchHelpSynopsis       = `Re-encrypts multiple headers at the same time`
+	pathFilesBatchHelpDescription    = `This path allows you to download re-encrypted headers in batches`
 	pathFilesListHelpSynopsis        = `List the uploaded headers for a specific project in a specific container / bucket`
 	pathFilesListHelpDescription     = `File header listing order is not specified`
 	pathContainerListHelpSynopsis    = `List the containers / buckets into which headers have been uploaded`
