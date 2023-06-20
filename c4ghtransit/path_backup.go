@@ -62,8 +62,8 @@ func (b *C4ghBackend) pathBackupList() *framework.Path {
 				Callback: b.pathListBackups,
 			},
 		},
-		HelpSynopsis:    pathContainerListHelpSynopsis,
-		HelpDescription: pathContainerListHelpDescription,
+		HelpSynopsis:    pathBackupListHelpSynopsis,
+		HelpDescription: pathBackupListHelpDescription,
 	}
 }
 
@@ -232,6 +232,8 @@ func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Stora
 }
 
 const (
-	pathBackupHelpSyn         = `Backup the named key, header, or whitelisted keys`
-	pathBackupHelpDescription = `This path is used for backups.`
+	pathBackupHelpSyn             = `Backup the named key, header, or whitelisted keys`
+	pathBackupHelpDescription     = `This path is used for backups.`
+	pathBackupListHelpSynopsis    = `Lists possible keys or projects into which headers have been uploaded`
+	pathBackupListHelpDescription = `Listing order is not specified`
 )

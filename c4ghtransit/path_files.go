@@ -91,7 +91,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 }
 
 // List stored file containers
-func (b *C4ghBackend) pathFilesBatch() *framework.Path {
+func (b *C4ghBackend) pathContainers() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
@@ -120,30 +120,12 @@ func (b *C4ghBackend) pathFilesBatch() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathFilesBatchRead,
 			},
-		},
-		HelpSynopsis:    pathFilesBatchHelpSynopsis,
-		HelpDescription: pathFilesBatchHelpDescription,
-	}
-}
-
-// List stored file containers
-func (b *C4ghBackend) pathListContainers() *framework.Path {
-	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
-		Fields: map[string]*framework.FieldSchema{
-			"project": {
-				Type:        framework.TypeLowerCaseString,
-				Description: "Project that the header is uploaded for",
-				Required:    true,
-			},
-		},
-		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathContainersList,
 			},
 		},
-		HelpSynopsis:    pathContainerListHelpSynopsis,
-		HelpDescription: pathContainerListHelpDescription,
+		HelpSynopsis:    pathContainersHelpSynopsis,
+		HelpDescription: pathContainersHelpDescription,
 	}
 }
 
@@ -303,7 +285,7 @@ func (b *C4ghBackend) pathFilesBatchRead(
 			found[pattern] = false
 		}
 
-		resps := []map[string]interface{}{}
+		resps := map[string]interface{}{}
 		for _, entry := range entries {
 			decodedEntry, err := base64.StdEncoding.DecodeString(entry)
 			if err != nil {
@@ -320,8 +302,11 @@ func (b *C4ghBackend) pathFilesBatchRead(
 					if err != nil {
 						return nil, err
 					}
+					if nextResp.IsError() {
+						return nextResp, nil
+					}
 					if nextResp != nil {
-						resps = append(resps, map[string]interface{}{"filename": string(decodedEntry), "entry": nextResp.Data})
+						resps[string(decodedEntry)] = nextResp.Data
 					}
 					break
 				}
@@ -614,10 +599,12 @@ This path allows you to add file headers that are encrypted with a public key kn
 to this transit service. These headers can then be downloaded re-encrypted
 with a whitelisted key, or deleted permanently using this path.
 `
-	pathFilesBatchHelpSynopsis       = `Re-encrypts multiple headers at the same time`
-	pathFilesBatchHelpDescription    = `This path allows you to download re-encrypted headers in batches`
-	pathFilesListHelpSynopsis        = `List the uploaded headers for a specific project in a specific container / bucket`
-	pathFilesListHelpDescription     = `File header listing order is not specified`
-	pathContainerListHelpSynopsis    = `List the containers / buckets into which headers have been uploaded`
-	pathContainerListHelpDescription = `Listing order is not specified`
+	pathContainersHelpSynopsis = `
+Re-encrypts multiple headers at the same time, and lists the containers / buckets into which headers have been uploaded
+`
+	pathContainersHelpDescription = `
+This path allows you to download re-encrypted headers in batches. Listing order of buckets is not specified.
+`
+	pathFilesListHelpSynopsis    = `List the uploaded headers for a specific project in a specific container / bucket`
+	pathFilesListHelpDescription = `File header listing order is not specified`
 )
