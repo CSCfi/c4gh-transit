@@ -330,7 +330,7 @@ func (b *C4ghBackend) pathFilesWrite(
 			return nil, err
 		}
 		if rawKeyEntry == nil {
-			return logical.ErrorResponse("no whitelisted project found"), nil
+			return logical.ErrorResponse("no whitelisted project found"), logical.ErrInvalidRequest
 		}
 		useProject = owner
 	} else {
