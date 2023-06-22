@@ -370,6 +370,7 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 	b, err := json.Marshal(batch)
 	if err != nil {
 		fmt.Println(err)
+
 		return
 	}
 
