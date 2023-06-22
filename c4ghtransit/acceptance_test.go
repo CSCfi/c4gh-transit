@@ -834,7 +834,6 @@ func testC4ghStepwiseReadFiles(t *testing.T, project, batch string, reference ma
 			if resp == nil {
 				return fmt.Errorf("Response was nil")
 			}
-			t.Log(resp.Data)
 
 			for refKey := range reference {
 				assert.Assert(t, cmp.Contains(resp.Data, refKey), fmt.Sprintf("Data does not contain the container %s", refKey))
