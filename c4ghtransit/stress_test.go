@@ -13,8 +13,6 @@ import (
 	"github.com/neicnordic/crypt4gh/keys"
 )
 
-const vaultImage = "hashicorp/vault:latest"
-
 func TestKeyRotateMultipleTimes(t *testing.T) {
 	err := os.Setenv("VAULT_ACC", "1")
 	if err != nil {
