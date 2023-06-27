@@ -62,6 +62,12 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Description: "Name of whitelisted key the service wants to use",
 				Required:    true,
 			},
+			"owner": {
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that owns the container (if the container is shared)",
+				Default:     "",
+				Required:    false,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -187,8 +193,25 @@ func (b *C4ghBackend) pathFilesRead(
 	file := d.Get("file").(string)
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
-	// Open old headers
-	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
+	var useProject string
+	owner := d.Get("owner").(string)
+	if owner != "" {
+		// Check if the project exists in whitelist
+		// listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
+		rawKeyEntry, err := req.Storage.Get(ctx, "sharing/"+owner+"/"+container+"/"+project)
+		if err != nil {
+			return nil, err
+		}
+		if rawKeyEntry == nil {
+			return logical.ErrorResponse("no whitelisted project found"), nil
+		}
+		useProject = owner
+	} else {
+		useProject = project
+	}
+
+	// Open the old header
+	filePath := fmt.Sprintf("files/%s/%s/%s", useProject, container, file64)
 	entry, err := req.Storage.Get(ctx, filePath)
 	if err != nil {
 		return nil, err
@@ -205,7 +228,7 @@ func (b *C4ghBackend) pathFilesRead(
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
-		Name:    project,
+		Name:    useProject,
 	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
@@ -297,10 +320,27 @@ func (b *C4ghBackend) pathFilesWrite(
 
 	file64 := base64.StdEncoding.EncodeToString([]byte(file))
 
+	var useProject string
+	owner := d.Get("owner").(string)
+	if owner != "" {
+		// Check if the project exists in whitelist
+		listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
+		rawKeyEntry, err := req.Storage.Get(ctx, listPath)
+		if err != nil {
+			return nil, err
+		}
+		if rawKeyEntry == nil {
+			return logical.ErrorResponse("no whitelisted project found"), logical.ErrInvalidRequest
+		}
+		useProject = owner
+	} else {
+		useProject = project
+	}
+
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
-		Name:    project,
+		Name:    useProject,
 	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
@@ -367,7 +407,7 @@ func (b *C4ghBackend) pathFilesWrite(
 	}
 
 	// Get old headers if they exist
-	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file64)
+	filePath := fmt.Sprintf("files/%s/%s/%s", useProject, container, file64)
 	oldEntry, err := req.Storage.Get(ctx, filePath)
 	if err != nil {
 		return nil, err
