@@ -63,7 +63,7 @@ func Backend(_ context.Context, _ *logical.BackendConfig) (*C4ghBackend, error) 
 			b.pathListServices(),
 			b.pathListWhitelistedKeys(),
 			b.pathListFiles(),
-			b.pathListContainers(),
+			b.pathContainers(),
 			b.pathFiles(),
 			b.pathImport(),
 			b.pathBackup(),

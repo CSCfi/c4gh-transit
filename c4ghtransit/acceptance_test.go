@@ -23,6 +23,8 @@ import (
 	stepwise "github.com/CSCfi/vault-testing-stepwise"
 )
 
+const vaultImage = "hashicorp/vault:latest"
+
 var (
 	oldKey         string
 	projectKey     string
@@ -331,6 +333,83 @@ func TestHeaderVersoning(t *testing.T) {
 	stepwise.Run(t, simpleCase)
 }
 
+func TestReadMultipleFileHeaders(t *testing.T) {
+	err := os.Setenv("VAULT_ACC", "1")
+	if err != nil {
+		t.Error("Failed to set VAULT_ACC")
+	}
+	mountOptions := stepwise.MountOptions{
+		MountPathPrefix: "c4ghtransit",
+		RegistryName:    "c4ghtransit",
+		PluginType:      api.PluginTypeSecrets,
+		PluginName:      "c4ghtransit",
+	}
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+
+	publicKey, privateKey, err := keys.GenerateKeyPair()
+	if err != nil {
+		fmt.Print("Failed to generate crypt4gh key pair")
+		t.Error(err)
+	}
+	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
+
+	project := "my-project"
+	project2 := "my-project-2"
+	service := "fake-service"
+	keyName := "fake-key-name"
+	container := "bucket"
+	container2 := "bucket-2"
+	path := "hidden-in-a-bucket.txt.c4gh"
+	path2 := "hidden-in-a-bucket2.txt.c4gh"
+	path3 := "hidden-in-a-bucket3.txt.c4gh"
+
+	reference := map[string][]string{container: {path, path2}, container2: {path}}
+	batch := make(map[string][]string)
+	batch[container] = []string{"*bucket.*", path2}
+	batch[container2] = []string{path}
+	b, err := json.Marshal(batch)
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
+	// Each step in a case is run sequentially.
+	// At the end of the case, the Docker container and network are removed, unless `SkipTeardown` is set to `true`
+	simpleCase := stepwise.Case{
+		Environment:  env,
+		SkipTeardown: false,
+		Steps: []stepwise.Step{
+			// Create a project key
+			testC4ghStepwiseWriteKey(t, project),
+			// Get the project key
+			testC4ghStepwiseReadKey(t, project),
+			// Add locally created pub key to the whitelist
+			testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString),
+			// Upload encrypted file
+			testC4ghStepwiseWriteFile(t, project, container, path),
+			// Upload another encrypted file
+			testC4ghStepwiseWriteFile(t, project, container, path2),
+			// Upload another encrypted file
+			testC4ghStepwiseWriteFile(t, project, container, path3),
+			// Upload another encrypted file
+			testC4ghStepwiseWriteFile(t, project, container2, path),
+			// Create a project key
+			testC4ghStepwiseWriteKey(t, project2),
+			// Get the project key
+			testC4ghStepwiseReadKey(t, project2),
+			// Add locally created pub key to the whitelist
+			testC4ghStepwiseWriteWhitelist(t, project2, service, keyName, publicKeyString),
+			// Upload encrypted file
+			testC4ghStepwiseWriteFile(t, project2, container2, path2),
+			// Download encrypted files, and confirm they can be decrypted
+			testC4ghStepwiseReadFiles(t, project, base64.StdEncoding.EncodeToString(b), reference, privateKey, service, keyName),
+		},
+	}
+	stepwise.Run(t, simpleCase)
+}
+
 func testC4ghStepwiseWriteKey(_ *testing.T, project string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteKey",
@@ -578,7 +657,7 @@ func testC4ghStepwiseWriteFile(_ *testing.T, project, container, path string, ot
 				return nil, err
 			}
 			if len(otherContent) == 0 {
-				encryptedFiles[path] = encryptedBody
+				encryptedFiles[project+"/"+container+"/"+path] = encryptedBody
 			}
 
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
@@ -606,7 +685,7 @@ func testC4ghStepwiseWriteSharedFile(_ *testing.T, project, container, path stri
 				return nil, err
 			}
 			if len(otherContent) == 0 {
-				encryptedFiles[path] = encryptedBody
+				encryptedFiles[owner+"/"+container+"/"+path] = encryptedBody
 			}
 
 			return map[string]interface{}{
@@ -620,7 +699,8 @@ func testC4ghStepwiseWriteSharedFile(_ *testing.T, project, container, path stri
 	}
 }
 
-func testC4ghStepwiseReadFile(t *testing.T, project string, container string, path string, privateKey [chacha20poly1305.KeySize]byte, service string, keyName string) stepwise.Step {
+func testC4ghStepwiseReadFile(t *testing.T, project string, container string, path string,
+	privateKey [chacha20poly1305.KeySize]byte, service string, keyName string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadFile",
 		Operation: stepwise.ReadOperation,
@@ -649,7 +729,7 @@ func testC4ghStepwiseReadFile(t *testing.T, project string, container string, pa
 			version := data.LatestVersion
 			for {
 				header := data.Headers[strconv.Itoa(version)]["header"]
-				decryptedFile, err = decryptFile(header, encryptedFiles[path], privateKey)
+				decryptedFile, err = decryptFile(header, encryptedFiles[project+"/"+container+"/"+path], privateKey)
 				if err == nil {
 					break
 				}
@@ -698,7 +778,7 @@ func testC4ghStepwiseReadSharedFile(t *testing.T, project string, container stri
 			version := data.LatestVersion
 			for {
 				header := data.Headers[strconv.Itoa(version)]["header"]
-				decryptedFile, err = decryptFile(header, encryptedFiles[path], privateKey)
+				decryptedFile, err = decryptFile(header, encryptedFiles[owner+"/"+container+"/"+path], privateKey)
 				if err == nil {
 					break
 				}
@@ -730,6 +810,72 @@ func testC4hgStepwiseReadShareFileFail(_ *testing.T, project string, container s
 		Assert: func(resp *api.Secret, err error) error {
 			if err == nil {
 				return fmt.Errorf("function should've failed")
+			}
+
+			return nil
+		},
+	}
+}
+
+func testC4ghStepwiseReadFiles(t *testing.T, project, batch string, reference map[string][]string,
+	privateKey [chacha20poly1305.KeySize]byte, service, keyName string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseReadFiles",
+		Operation: stepwise.ReadOperation,
+		Path:      fmt.Sprintf("/files/%s", project),
+		ReadData: map[string][]string{
+			"batch":   {batch},
+			"service": {service},
+			"key":     {keyName},
+		},
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
+			if resp == nil {
+				return fmt.Errorf("Response was nil")
+			}
+
+			for refKey := range reference {
+				assert.Assert(t, cmp.Contains(resp.Data, refKey), fmt.Sprintf("Data does not contain the container %s", refKey))
+			}
+			assert.Equal(t, len(resp.Data), len(reference), "Data does not contain the correct amount of containers")
+
+			for dataKey, dataValue := range resp.Data {
+				var data map[string]struct {
+					Headers       map[string]map[string]string `mapstructure:"headers"`
+					LatestVersion int                          `mapstructure:"latest_version"`
+				}
+				if err := mapstructure.Decode(dataValue, &data); err != nil {
+					fmt.Println("failed decoding to mapstructure")
+
+					return err
+				}
+
+				for _, refObj := range reference[dataKey] {
+					assert.Assert(t, cmp.Contains(data, refObj), fmt.Sprintf("Container %s does not contain object %s", dataKey, refObj))
+				}
+				assert.Equal(t, len(data), len(reference[dataKey]), fmt.Sprintf("Container %s does not contain the correct amount of objects: %v", dataKey, data))
+
+				for _, obj := range reference[dataKey] {
+					var decryptedFile []byte
+					version := data[obj].LatestVersion
+					for {
+						header := data[obj].Headers[strconv.Itoa(version)]["header"]
+						decryptedFile, err = decryptFile(header, encryptedFiles[project+"/"+dataKey+"/"+obj], privateKey)
+						if err == nil {
+							break
+						}
+						version--
+						if version == 0 {
+							fmt.Println("Error decrypting file: ", err)
+
+							return err
+						}
+					}
+					var decryptedFileString = string(decryptedFile)
+					assert.Equal(t, decryptedFileString, content, "Decrypted file and original content don't match")
+				}
 			}
 
 			return nil
@@ -794,7 +940,7 @@ func testC4ghStepwiseWriteFileFail(_ *testing.T, project, container, path string
 
 				return nil, err
 			}
-			encryptedFiles[path] = encryptedBody
+			encryptedFiles[project+"/"+container+"/"+path] = encryptedBody
 
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
