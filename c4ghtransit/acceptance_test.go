@@ -685,7 +685,7 @@ func testC4ghStepwiseWriteSharedFile(_ *testing.T, project, container, path stri
 				return nil, err
 			}
 			if len(otherContent) == 0 {
-				encryptedFiles[path] = encryptedBody
+				encryptedFiles[owner+"/"+container+"/"+path] = encryptedBody
 			}
 
 			return map[string]interface{}{
@@ -778,7 +778,7 @@ func testC4ghStepwiseReadSharedFile(t *testing.T, project string, container stri
 			version := data.LatestVersion
 			for {
 				header := data.Headers[strconv.Itoa(version)]["header"]
-				decryptedFile, err = decryptFile(header, encryptedFiles[path], privateKey)
+				decryptedFile, err = decryptFile(header, encryptedFiles[owner+"/"+container+"/"+path], privateKey)
 				if err == nil {
 					break
 				}

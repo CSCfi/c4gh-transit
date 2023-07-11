@@ -230,7 +230,7 @@ func (b *C4ghBackend) pathFilesRead(
 		useProject = project
 	}
 
-	return b.readFile(ctx, req, useProject, container, file64, service, keyName)
+	return b.readFile(ctx, req, useProject, container, file64, service, keyName, project)
 }
 
 // Read a re-encrypted header
@@ -254,27 +254,10 @@ func (b *C4ghBackend) pathFilesBatchRead(
 		return nil, err
 	}
 
-	var useProject string
-	owner := d.Get("owner").(string)
-	if owner != "" {
-		// Check if the project exists in whitelist
-		// listPath := fmt.Sprintf("sharing/%s/%s/%s", owner, container, project)
-		rawKeyEntry, err := req.Storage.Get(ctx, "sharing/"+owner+"/"+container+"/"+project)
-		if err != nil {
-			return nil, err
-		}
-		if rawKeyEntry == nil {
-			return logical.ErrorResponse("no whitelisted project found"), nil
-		}
-		useProject = owner
-	} else {
-		useProject = project
-	}
-
 	resp := &logical.Response{}
 	resp.Data = make(map[string]interface{})
 	for container := range batchJSON {
-		listPath := fmt.Sprintf("files/%s/%s/", useProject, container)
+		listPath := fmt.Sprintf("files/%s/%s/", project, container)
 		entries, err := req.Storage.List(ctx, listPath)
 		if err != nil {
 			return nil, err
@@ -298,7 +281,7 @@ func (b *C4ghBackend) pathFilesBatchRead(
 				}
 				if match {
 					found[pattern] = true
-					nextResp, err := b.readFile(ctx, req, useProject, container, entry, service, keyName)
+					nextResp, err := b.readFile(ctx, req, project, container, entry, service, keyName, project)
 					if err != nil {
 						return nil, err
 					}
@@ -329,10 +312,10 @@ func (b *C4ghBackend) pathFilesBatchRead(
 func (b *C4ghBackend) readFile(
 	ctx context.Context,
 	req *logical.Request,
-	project, container, file, service, keyName string,
+	owner, container, file, service, keyName, project string,
 ) (*logical.Response, error) {
 	// Open old headers
-	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file)
+	filePath := fmt.Sprintf("files/%s/%s/%s", owner, container, file)
 	entry, err := req.Storage.Get(ctx, filePath)
 	if err != nil {
 		return nil, err
@@ -349,7 +332,7 @@ func (b *C4ghBackend) readFile(
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
-		Name:    useProject,
+		Name:    owner,
 	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
