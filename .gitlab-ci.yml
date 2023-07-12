@@ -38,6 +38,27 @@ lint:
   after_script:
     - sudo rm -rf .go/pkg
 
+jfrog-go-audit:
+  stage: test
+  rules:
+    # We don't run on tags and default branch
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: never
+    - if: "$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS"
+      when: never
+    - if: '$CI_COMMIT_TAG !~ "/^$/"'
+      when: never
+  tags:
+    - sds
+  script:
+    # Configure JFrog Artifactory repositories
+    - jf config import "${JF_CONFIG}"
+    - jf go-config --repo-resolve $ARTIFACTORY_SERVER
+    # Audit Go project
+    - jf audit --go --licenses --extended-table --min-severity=Medium
+
 test:
   stage: test
   rules:
@@ -69,25 +90,15 @@ build-binary:
   script:
     - mkdir -p output
     - CGO_ENABLED=0 go build -tags netgo -a -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
-    - ARTIFACT_MD5_CHECKSUM=$(md5sum output/c4ghtransit | awk '{print $1}')
-    - ARTIFACT_SHA1_CHECKSUM=$(shasum -a 1 output/c4ghtransit | awk '{ print $1 }')
-    - ARTIFACT_SHA256_CHECKSUM=$(shasum -a 256 output/c4ghtransit | awk '{ print $1 }')
+    # Configure JFrog Artifactory repositories
+    - jf config import "${JF_CONFIG}"
+    # Scan binary
+    - jf s --licenses output/c4ghtransit --repo ${ARTIFACTORY_SERVER_BINARY_REPO}
     - >
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
-        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
-        --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
-        --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
-        --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
-        "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit" \
-        -T output/c4ghtransit
+        jt rt u output/c4ghtransit "$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
       else
         echo Pushing "${CI_COMMIT_TAG}" plugin build
-        mv output/c4ghtransit "output/c4ghtransit-${CI_COMMIT_TAG}"
-        curl -u $ARTIFACTORY_USER:$ARTIFACTORY_USER_PASSWORD -X PUT \
-        --header "X-Checksum-MD5:${ARTIFACT_MD5_CHECKSUM}" \
-        --header "X-Checksum-Sha1:${ARTIFACT_SHA1_CHECKSUM}" \
-        --header "X-Checksum-Sha256:${ARTIFACT_SHA256_CHECKSUM}" \
-        "https://$ARTIFACTORY_SERVER/artifactory/sds-generic-local/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}" \
-        -T "output/c4ghtransit-${CI_COMMIT_TAG}"
+        jt rt u output/c4ghtransit $ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
       fi
