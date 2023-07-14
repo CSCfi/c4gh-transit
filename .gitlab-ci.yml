@@ -97,8 +97,8 @@ build-binary:
     - >
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
-        jt rt u output/c4ghtransit "$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
+        jf rt u output/c4ghtransit "$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
       else
         echo Pushing "${CI_COMMIT_TAG}" plugin build
-        jt rt u output/c4ghtransit $ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
+        jf rt u output/c4ghtransit $ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
       fi
