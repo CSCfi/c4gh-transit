@@ -135,6 +135,10 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 			testC4ghStepwiseWriteFile(t, project, container, path),
 			// Download encrypted file, and confirm it can be decrypted
 			testC4ghStepwiseReadFile(t, project, container, path, privateKey, service, keyName),
+			// Delete Whitelist
+			testC4ghStepwiseDeleteWhitelist(t, project, service, keyName),
+			// Try to read file after whitelist should get empty response
+			testC4hgStepwiseReadWhitelistFileFail(t, project, container, path, service, keyName),
 		},
 	}
 	stepwise.Run(t, simpleCase)
@@ -327,6 +331,10 @@ func TestHeaderVersoning(t *testing.T) {
 			testC4ghStepwiseWriteFile(t, project, container, path, badContent),
 			// Download encrypted file with old content after the newer content was not saved
 			testC4ghStepwiseReadFile(t, project, container, path, privateKey, service, keyName),
+			// Delete File
+			testC4ghStepwiseDeleteFile(t, project, container, path, service, keyName),
+			// Try to read delete file should get empty response
+			testC4hgStepwiseReadFileFail(t, project, container, path, service, keyName),
 		},
 	}
 	stepwise.Run(t, simpleCase)
@@ -1038,4 +1046,75 @@ func decryptFile(header string, encryptedBody []byte, privateKey [chacha20poly13
 	var decryptedFile = decryptedBuffer.Bytes()
 
 	return decryptedFile, nil
+}
+
+func testC4ghStepwiseDeleteFile(_ *testing.T, project string, container string, path string, service string, keyName string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseDeleteFile",
+		Operation: stepwise.DeleteOperation,
+		Path:      fmt.Sprintf("files/%s/%s/%s", project, container, path),
+		BodyData: map[string][]string{
+			"service": {service},
+			"key":     {keyName},
+		},
+		Assert: func(resp *api.Secret, err error) error {
+			return err
+		},
+	}
+}
+
+func testC4hgStepwiseReadFileFail(_ *testing.T, project string, container string, path string, service string, keyName string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4hgStepwiseReadFileFail",
+		Operation: stepwise.ReadOperation,
+		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
+		BodyData: map[string][]string{
+			"service": {service},
+			"key":     {keyName},
+		},
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if resp != nil {
+				return fmt.Errorf("response for data should be null")
+			}
+
+			return nil
+		},
+	}
+}
+
+func testC4ghStepwiseDeleteWhitelist(_ *testing.T, project string, service string, name string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseDeleteWhitelist",
+		Operation: stepwise.DeleteOperation,
+		Path:      fmt.Sprintf("whitelist/%s/%s/%s", project, service, name),
+		Assert: func(resp *api.Secret, err error) error {
+			return err
+		},
+	}
+}
+
+func testC4hgStepwiseReadWhitelistFileFail(_ *testing.T, project string, container string, path string, service string, keyName string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4hgStepwiseReadWhitelistFileFail",
+		Operation: stepwise.ReadOperation,
+		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
+		BodyData: map[string][]string{
+			"service": {service},
+			"key":     {keyName},
+		},
+		Assert: func(resp *api.Secret, err error) error {
+			if err == nil {
+				return fmt.Errorf("function should've failed")
+			}
+			if resp != nil {
+				return fmt.Errorf("response for data should be null")
+			}
+
+			return nil
+		},
+	}
 }
