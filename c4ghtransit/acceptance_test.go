@@ -209,11 +209,10 @@ func TestHeaderSharingLifecycle(t *testing.T) {
 			testC4ghStepwiseWriteSharedFile(t, otherProject, container, otherPath, project),
 			// Test reading the file from the original project
 			testC4ghStepwiseReadFile(t, project, container, otherPath, privateKey, service, keyName),
-			// TODO: Tests for deletion sync, stepwise client doesn't seem to support usage with params in deletion.
 			// Remove access to decryption
-			// testC4ghStepwiseDeleteSharingWhitelist(t, project, container, otherProject),
+			testC4ghStepwiseDeleteSharingWhitelist(t, project, container, otherProject),
 			// Check the download fails again
-			// testC4hgStepwiseReadShareFileFail(t, otherProject, container, path, service, keyName, project),
+			testC4hgStepwiseReadShareFileFail(t, otherProject, container, path, service, keyName, project),
 		},
 	}
 	stepwise.Run(t, simpleCase)
@@ -609,7 +608,7 @@ func testC4ghStepwiseReadSharingWhitelist(t *testing.T, project string, containe
 		Name:      "testC4ghStepwiseReadSharingWhitelist",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/sharing/%s/%s", project, container),
-		ReadData: map[string][]string{
+		BodyData: map[string][]string{
 			"id": {otherProject},
 		},
 		Assert: func(resp *api.Secret, err error) error {
@@ -624,14 +623,12 @@ func testC4ghStepwiseReadSharingWhitelist(t *testing.T, project string, containe
 	}
 }
 
-// Leave this for later, from the look of it stepwise doesn't support parameters in delete requests yet.
-// nolint:unused
 func testC4ghStepwiseDeleteSharingWhitelist(_ *testing.T, project string, container string, otherProject string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseDeleteSharingWhitelist",
 		Operation: stepwise.DeleteOperation,
 		Path:      fmt.Sprintf("/sharing/%s/%s", project, container),
-		ReadData: map[string][]string{
+		BodyData: map[string][]string{
 			"id": {otherProject},
 		},
 		Assert: func(resp *api.Secret, err error) error {
@@ -705,7 +702,7 @@ func testC4ghStepwiseReadFile(t *testing.T, project string, container string, pa
 		Name:      "testC4ghStepwiseReadFile",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
-		ReadData: map[string][]string{
+		BodyData: map[string][]string{
 			"service": {service},
 			"key":     {keyName},
 		},
@@ -753,7 +750,7 @@ func testC4ghStepwiseReadSharedFile(t *testing.T, project string, container stri
 		Name:      "testC4ghStepwiseReadSharedFile",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
-		ReadData: map[string][]string{
+		BodyData: map[string][]string{
 			"service": {service},
 			"key":     {keyName},
 			"owner":   {owner},
@@ -802,7 +799,7 @@ func testC4hgStepwiseReadShareFileFail(_ *testing.T, project string, container s
 		Name:      "testC4ghStepwiseReadSharedFileFail",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
-		ReadData: map[string][]string{
+		BodyData: map[string][]string{
 			"service": {service},
 			"key":     {keyName},
 			"owner":   {owner},
@@ -823,7 +820,7 @@ func testC4ghStepwiseReadFiles(t *testing.T, project, batch string, reference ma
 		Name:      "testC4ghStepwiseReadFiles",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/files/%s", project),
-		ReadData: map[string][]string{
+		BodyData: map[string][]string{
 			"batch":   {batch},
 			"service": {service},
 			"key":     {keyName},
