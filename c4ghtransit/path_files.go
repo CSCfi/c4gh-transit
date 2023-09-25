@@ -117,7 +117,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathFilesBatchRead,
 			},
 			logical.ListOperation: &framework.PathOperation{
