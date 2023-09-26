@@ -145,8 +145,13 @@ func (b *C4ghBackend) pathKeyRead(
 	if err != nil {
 		return nil, err
 	}
-	if p == nil {
-		return nil, nil
+	if p == nil { // key does not exist
+		resp, err := b.pathKeyUpdate(ctx, req, d)
+		if err != nil {
+			return resp, err
+		}
+
+		return b.pathKeyRead(ctx, req, d)
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
