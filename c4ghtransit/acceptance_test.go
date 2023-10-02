@@ -826,13 +826,9 @@ func testC4ghStepwiseReadFiles(t *testing.T, project, batch string, reference ma
 	privateKey [chacha20poly1305.KeySize]byte, service, keyName string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadFiles",
-		Operation: stepwise.ReadOperation,
+		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s", project),
-		BodyData: map[string][]string{
-			"batch":   {batch},
-			"service": {service},
-			"key":     {keyName},
-		},
+		Data:      map[string]interface{}{"batch": batch, "service": service, "key": keyName},
 		Assert: func(resp *api.Secret, err error) error {
 			if err != nil {
 				return err
