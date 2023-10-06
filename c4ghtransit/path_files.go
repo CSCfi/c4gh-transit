@@ -32,7 +32,7 @@ type fileEntryMap struct {
 // pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
 func (b *C4ghBackend) pathFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/" + framework.MatchAllRegex("file"),
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -132,7 +132,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 // List containers
 func (b *C4ghBackend) pathListFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/?$",
+		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
