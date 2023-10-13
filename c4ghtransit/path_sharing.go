@@ -17,7 +17,7 @@ type transitSharingWhitelistEntry struct {
 // to ask for re-encrypted headers for specific files, folders or projects
 func (b *C4ghBackend) pathSharingContainers() *framework.Path {
 	return &framework.Path{
-		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container"),
+		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container"),
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -62,7 +62,7 @@ func (b *C4ghBackend) pathSharingContainers() *framework.Path {
 //nolint:unused
 func (b *C4ghBackend) pathSharingFiles() *framework.Path {
 	return &framework.Path{
-		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file"),
+		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/" + framework.MatchAllRegex("file"),
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -131,7 +131,7 @@ func (b *C4ghBackend) pathSharingList() *framework.Path {
 
 func (b *C4ghBackend) pathSharingContainerList() *framework.Path {
 	return &framework.Path{
-		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/?$",
+		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
@@ -156,7 +156,7 @@ func (b *C4ghBackend) pathSharingContainerList() *framework.Path {
 
 func (b *C4ghBackend) pathSharingFileList() *framework.Path {
 	return &framework.Path{
-		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + framework.GenericNameRegex("container") + "/" + framework.MatchAllRegex("file") + "/?$",
+		Pattern: "sharing/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/" + framework.MatchAllRegex("file") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
 				Type:        framework.TypeLowerCaseString,
