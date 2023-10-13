@@ -417,6 +417,54 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 	stepwise.Run(t, simpleCase)
 }
 
+func TestHeaderWithWhitespaceContainerAndForbidden(t *testing.T) {
+	err := os.Setenv("VAULT_ACC", "1")
+	if err != nil {
+		t.Error("Failed to set VAULT_ACC")
+	}
+	mountOptions := stepwise.MountOptions{
+		MountPathPrefix: "c4ghtransit",
+		RegistryName:    "c4ghtransit",
+		PluginType:      api.PluginTypeSecrets,
+		PluginName:      "c4ghtransit",
+	}
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+
+	publicKey, _, err := keys.GenerateKeyPair()
+	if err != nil {
+		fmt.Print("Failed to generate crypt4gh key pair")
+		t.Error(err)
+	}
+	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
+
+	project := "my-project"
+	service := "fake-service"
+	keyName := "fake-key-name"
+	container := "bucket with spaces and 日本語"
+	containerForbid := "bucket with spaces and forbidden []"
+	path := "hidden-in-a-bucket.txt.c4gh"
+
+	weirdNameCase := stepwise.Case{
+		Environment:  env,
+		SkipTeardown: false,
+		Steps: []stepwise.Step{
+			// Create a project key
+			testC4ghStepwiseWriteKey(t, project),
+			// Get the project key
+			testC4ghStepwiseReadKey(t, project),
+			// Add locally created pub key to the whitelist
+			testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString),
+			// Confirm key exists
+			testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString),
+			// Upload a file to a container that should succeed
+			testC4ghStepwiseWriteFile(t, project, container, path),
+			// Upload a file to a container that should not succeed
+			testC4ghStepwiseWriteFileFail(t, project, containerForbid, path),
+		},
+	}
+	stepwise.Run(t, weirdNameCase)
+}
+
 func testC4ghStepwiseWriteKey(_ *testing.T, project string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteKey",
