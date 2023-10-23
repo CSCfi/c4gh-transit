@@ -683,7 +683,7 @@ func testC4ghStepwiseWriteSharingWhitelistFail(_ *testing.T, project string, con
 		},
 		Assert: func(resp *api.Secret, err error) error {
 			if err == nil {
-				return fmt.Errorf("Function should've failed.")
+				return fmt.Errorf("function should've failed")
 			}
 
 			return nil
@@ -735,7 +735,7 @@ func testC4ghStepwiseDeleteSharingWhitelistFail(_ *testing.T, project string, co
 		},
 		Assert: func(resp *api.Secret, err error) error {
 			if err == nil {
-				return fmt.Errorf("Function should've failed.")
+				return fmt.Errorf("function should've failed")
 			}
 
 			return nil
