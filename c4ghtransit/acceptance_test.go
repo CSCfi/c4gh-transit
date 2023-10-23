@@ -179,6 +179,9 @@ func TestHeaderSharingLifecycle(t *testing.T) {
 	path := "shared-file.txt.c4gh"
 	otherPath := "new-file-from-other.txt.c4gh"
 
+	containerWithSpaces := "container with spaces"
+	containerWithForbidden := "container$with[]forbidden@chars~"
+
 	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
 	// Each step in a case is run sequentially.
 	// At the end of the case, the Docker container and network are removed, unless `SkipTeardown` is set to `true`
@@ -217,6 +220,14 @@ func TestHeaderSharingLifecycle(t *testing.T) {
 			testC4ghStepwiseDeleteSharingWhitelist(t, project, container, otherProject),
 			// Check the download fails again
 			testC4hgStepwiseReadShareFileFail(t, otherProject, container, path, service, keyName, project),
+			// Test that the sharing succeeds with a container with spaces in the name
+			testC4ghStepwiseWriteSharingWhitelist(t, project, containerWithSpaces, otherProject, otherProject),
+			testC4ghStepwiseReadSharingWhitelist(t, project, containerWithSpaces, otherProject),
+			testC4ghStepwiseDeleteSharingWhitelist(t, project, containerWithSpaces, otherProject),
+			// Test that the sharing fails with a container with forbidden characters in the name
+			testC4ghStepwiseWriteSharingWhitelistFail(t, project, containerWithForbidden, otherProject, otherProject),
+			// Not testing for failures with reads, as reads fail with an empty request
+			testC4ghStepwiseDeleteSharingWhitelistFail(t, project, containerWithForbidden, otherProject),
 		},
 	}
 	stepwise.Run(t, simpleCase)
@@ -659,6 +670,27 @@ func testC4ghStepwiseWriteSharingWhitelist(_ *testing.T, project string, contain
 	}
 }
 
+func testC4ghStepwiseWriteSharingWhitelistFail(_ *testing.T, project string, container string, otherProject string, otherProjectID string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseWriteSharingWhitelistFail",
+		Operation: stepwise.WriteOperation,
+		Path:      fmt.Sprintf("/sharing/%s/%s", project, container),
+		GetData: func() (map[string]interface{}, error) {
+			return map[string]interface{}{
+				"id":         otherProject,
+				"idkeystone": otherProjectID,
+			}, nil
+		},
+		Assert: func(resp *api.Secret, err error) error {
+			if err == nil {
+				return fmt.Errorf("Function should've failed.")
+			}
+
+			return nil
+		},
+	}
+}
+
 func testC4ghStepwiseReadSharingWhitelist(t *testing.T, project string, container string, otherProject string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadSharingWhitelist",
@@ -689,6 +721,24 @@ func testC4ghStepwiseDeleteSharingWhitelist(_ *testing.T, project string, contai
 		},
 		Assert: func(resp *api.Secret, err error) error {
 			return err
+		},
+	}
+}
+
+func testC4ghStepwiseDeleteSharingWhitelistFail(_ *testing.T, project string, container string, otherProject string) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseDeleteSharingWhitelistFail",
+		Operation: stepwise.DeleteOperation,
+		Path:      fmt.Sprintf("/sharing/%s/%s", project, container),
+		BodyData: map[string][]string{
+			"id": {otherProject},
+		},
+		Assert: func(resp *api.Secret, err error) error {
+			if err == nil {
+				return fmt.Errorf("Function should've failed.")
+			}
+
+			return nil
 		},
 	}
 }
