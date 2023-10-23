@@ -25,7 +25,7 @@ func (b *C4ghBackend) pathSharingContainers() *framework.Path {
 				Required:    true,
 			},
 			"container": {
-				Type:        framework.TypeNameString,
+				Type:        framework.TypeString,
 				Description: "Container that is to be whitelisted",
 				Required:    true,
 			},
@@ -70,7 +70,7 @@ func (b *C4ghBackend) pathSharingFiles() *framework.Path {
 				Required:    true,
 			},
 			"container": {
-				Type:        framework.TypeNameString,
+				Type:        framework.TypeString,
 				Description: "Container that is to be whitelisted",
 				Required:    true,
 			},
