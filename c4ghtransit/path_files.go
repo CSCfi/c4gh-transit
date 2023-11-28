@@ -85,6 +85,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Callback: b.pathFilesDelete,
 			},
 		},
+		ExistenceCheck:  b.pathFilesExistenceCheck,
 		HelpSynopsis:    pathFilesHelpSynopsis,
 		HelpDescription: pathFilesHelpDescription,
 	}
@@ -231,6 +232,15 @@ func (b *C4ghBackend) pathFilesRead(
 	}
 
 	return b.readFile(ctx, req, useProject, container, file64, service, keyName, project)
+}
+
+// check a file exists by trying to read it
+// this to decide if the operation is POST or PUT
+// see https://github.com/hashicorp/vault/issues/22173#issuecomment-1762962763
+func (b *C4ghBackend) pathFilesExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	resp, err := b.pathFilesRead(ctx, req, d)
+
+	return resp != nil && !resp.IsError(), err
 }
 
 // Read a re-encrypted header
