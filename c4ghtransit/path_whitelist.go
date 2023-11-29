@@ -66,6 +66,7 @@ func (b *C4ghBackend) pathWhitelist() *framework.Path {
 				Callback: b.pathWhitelistDelete,
 			},
 		},
+		ExistenceCheck:  b.pathWhitelistExistenceCheck,
 		HelpSynopsis:    pathWhitelistHelpSynopsis,
 		HelpDescription: pathWhitelistHelpDescription,
 	}
@@ -181,6 +182,15 @@ func (b *C4ghBackend) pathWhitelistRead(
 			"name":    result.Name,
 		},
 	}, nil
+}
+
+// check a whitelist exists by trying to read it
+// this to decide if the operation is POST or PUT
+// see https://github.com/hashicorp/vault/issues/22173#issuecomment-1762962763
+func (b *C4ghBackend) pathWhitelistExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	resp, err := b.pathWhitelistRead(ctx, req, d)
+
+	return resp != nil && !resp.IsError(), err
 }
 
 // Write a public key into Vault storage

@@ -37,6 +37,8 @@ func (b *C4ghBackend) pathCacheConfig() *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.pathConfigExistenceCheck,
+
 		HelpSynopsis:    pathCacheConfigHelpSyn,
 		HelpDescription: pathCacheConfigHelpDesc,
 	}
@@ -101,6 +103,16 @@ func (b *C4ghBackend) pathCacheConfigRead(ctx context.Context, req *logical.Requ
 	}
 
 	return resp, nil
+}
+
+// pathConfigExistenceCheck verifies if the configuration exists.
+// check a file exists by trying to read it
+// this to decide if the operation is POST or PUT
+// see https://github.com/hashicorp/vault/issues/22173#issuecomment-1762962763
+func (b *C4ghBackend) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	resp, err := b.pathCacheConfigRead(ctx, req, d)
+
+	return resp != nil && !resp.IsError(), err
 }
 
 const pathCacheConfigHelpSyn = `Configure caching strategy`
