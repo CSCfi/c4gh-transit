@@ -54,6 +54,7 @@ func (b *C4ghBackend) pathSharingContainers() *framework.Path {
 				Callback: b.pathSharingDelete,
 			},
 		},
+		ExistenceCheck:  b.pathSharingExistenceCheck,
 		HelpSynopsis:    pathSharingHelpSynopsis,
 		HelpDescription: pathSharingHelpDescription,
 	}
@@ -104,6 +105,7 @@ func (b *C4ghBackend) pathSharingFiles() *framework.Path {
 				Callback: b.pathFileSharingDelete,
 			},
 		},
+		ExistenceCheck:  b.pathSharingExistenceCheck,
 		HelpSynopsis:    pathFileSharingHelpSynopsis,
 		HelpDescription: pathFileSharingHelpDescription,
 	}
@@ -263,6 +265,15 @@ func (b *C4ghBackend) pathSharingRead(
 			"idkeystone": result.IDKeystone,
 		},
 	}, nil
+}
+
+// check a sharing exists by trying to read it
+// this to decide if the operation is POST or PUT
+// see https://github.com/hashicorp/vault/issues/22173#issuecomment-1762962763
+func (b *C4ghBackend) pathSharingExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
+	resp, err := b.pathSharingRead(ctx, req, d)
+
+	return resp != nil && !resp.IsError(), err
 }
 
 // Add a project to container whitelist
