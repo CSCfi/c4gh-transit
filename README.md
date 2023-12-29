@@ -59,16 +59,17 @@ docker run --rm \
 
 ## Running with the vault server
 
-The commands below assume that the plugin binary exists at `./vault/plugins/c4ghtransit`
-
 ### In local environment
 Install vault: https://developer.hashicorp.com/vault/downloads
 
-Then run a development server with the plugin available
+Then run the script provided to start a vault server with the plugin enabled and configured.
 
-`VAULT_LOG_LEVEL=DEBUG vault server -dev -dev-plugin-dir=vault/plugins -dev-root-token-id="devroot"`
+    ./dev-tools/vault.sh
 
 ### With docker Alpine image
+
+The commands below assume that the plugin binary exists at `./vault/plugins/c4ghtransit`
+
 ```
 docker run --rm \
     --name=dev-vault \
