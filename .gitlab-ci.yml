@@ -117,4 +117,4 @@ release:
     assets:
       links:
         - name: c4ghtransit-${RELEASE_VERSION}
-          url: https://$ARTIFACTORY_SERVER/$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${RELEASE_VERSION}
+          url: https://$ARTIFACTORY_SERVER/artifactory/$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${RELEASE_VERSION}
