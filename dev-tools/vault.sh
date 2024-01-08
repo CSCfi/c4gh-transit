@@ -9,6 +9,7 @@ set -e
 
 # Dependencies
 # - vault
+# - the plugin should be built and present under 'vault/plugins'
 
 # get the current folder
 SCRIPT=$(realpath "$0")
@@ -35,12 +36,6 @@ function initVault {
         role_id="$VAULT_ROLE"
     vault write -format=json -f auth/approle/role/"$VAULT_ROLE"/custom-secret-id secret_id="$VAULT_SECRET"
 }
-
-# update the code and build the plugin
-cd "$(git rev-parse --show-toplevel)"
-git pull
-mkdir -p vault/plugins
-go build -v -o vault/plugins/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
 
 # setup vault in the background, after the server is up
 initVault 2>&1 &

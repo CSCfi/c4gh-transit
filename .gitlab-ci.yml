@@ -108,17 +108,61 @@ build-binary:
         echo Pushing "${CI_COMMIT_TAG}" plugin build
         jf rt u output/c4ghtransit $ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
       fi
+  after_script:
+    - echo "BINARY_JOB_ID=$CI_JOB_ID" >> binary_job_id.env
   artifacts:
     expose_as: 'c4ghtransit'
     paths:
       - output/c4ghtransit
     expire_in: never
+    reports:
+      dotenv: binary_job_id.env
 
 
+build-openapi:
+  stage: build
+  image:
+    name: docker.io/hashicorp/vault:1.15
+    entrypoint: [""]
+  tags:
+    - docker-exec
+  rules:
+    - if: '$CI_COMMIT_TAG !~ "/^$/"'
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never
+  needs:
+    - job: build-binary
+      artifacts: true
+  before_script:
+    - apk add bash jq git wget curl
+    - mkdir -p vault/plugins
+    - mv output/c4ghtransit vault/plugins
+    - bash dev-tools/vault.sh &
+  script:
+    - sleep 5
+    - bash dev-tools/generate_openapi.sh
+  after_script:
+    - echo "OPENAPI_JOB_ID=$CI_JOB_ID" >> openapi_job_id.env
+  artifacts:
+    expose_as: 'c4ghtransit-openapi-schema'
+    paths:
+      - dev-tools/openapi.json
+    expire_in: never
+    reports:
+      dotenv: openapi_job_id.env
 
 
 release:
   extends: .automated-release
+  needs:
+    - job: prepare-release
+      artifacts: true
+    - job: build-binary
+      artifacts: true
+    - job: build-openapi
+      artifacts: true
   release:
     description: "Vault crypt4gh-transit plugin - automated release"
     assets:
@@ -126,4 +170,6 @@ release:
         - name: c4ghtransit-${RELEASE_VERSION} (artifactory)
           url: https://$ARTIFACTORY_SERVER/artifactory/$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${RELEASE_VERSION}
         - name: c4ghtransit-${RELEASE_VERSION} (gitlab)
-          url: $CI_PROJECT_URL/-/jobs/$BINARY_JOB_ID/artifacts/download
+          url: $CI_PROJECT_URL/-/jobs/$BINARY_JOB_ID/artifacts/raw/dev-tools/openapi.json
+        - name: c4ghtransit-${RELEASE_VERSION}-openapi-schema.json
+          url: $CI_PROJECT_URL/-/jobs/$OPENAPI_JOB_ID/artifacts/raw/output/c4ghtransit
