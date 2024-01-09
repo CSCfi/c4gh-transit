@@ -26,8 +26,10 @@ func (b *C4ghBackend) pathRewrap() *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRewrapWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:    b.pathRewrapWrite,
+			},
 		},
 
 		HelpSynopsis:    pathRewrapHelpSyn,

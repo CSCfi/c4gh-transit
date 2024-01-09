@@ -51,8 +51,10 @@ func (b *C4ghBackend) pathRestore() *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathRestoreUpdate,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback:    b.pathRestoreUpdate,
+			},
 		},
 
 		HelpSynopsis:    pathRestoreHelpSyn,
