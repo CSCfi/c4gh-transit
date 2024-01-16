@@ -54,18 +54,18 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				},
 			},
 			"file": {
-				Type:          framework.TypeString,
-				Description:   "Full object path of the file the uploaded header belongs to",
-				Required:      true,
+				Type:        framework.TypeString,
+				Description: "Full object path of the file the uploaded header belongs to",
+				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "File",
 					Value: "path/to/object",
 				},
 			},
 			"header": {
-				Type:          framework.TypeString,
-				Description:   "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin. Must be in the request body.",
-				Required:      true,
+				Type:        framework.TypeString,
+				Description: "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin. Must be in the request body.",
+				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Header",
 					Value: "b64encoded",
@@ -77,7 +77,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Required:    true,
 				Query:       true,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Service",
+					Name: "Service",
 				},
 			},
 			"key": {
@@ -86,7 +86,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Required:    true,
 				Query:       true,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:        "Key",
+					Name: "Key",
 				},
 			},
 			"owner": {
@@ -96,7 +96,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Required:    false,
 				Query:       true,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:        "Owner",
+					Name: "Owner",
 				},
 			},
 		},
@@ -138,8 +138,8 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback:    b.pathFilesDelete,
-				Summary:     "Delete an encrypted header",
+				Callback: b.pathFilesDelete,
+				Summary:  "Delete an encrypted header",
 				Responses: map[int][]framework.Response{
 					http.StatusNoContent: {
 						{
@@ -161,11 +161,11 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
-				Type:          framework.TypeLowerCaseString,
-				Description:   "Project that the header is uploaded for",
-				Required:      true,
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that the header is uploaded for",
+				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Project",
+					Name: "Project",
 				},
 			},
 			"batch": {
@@ -221,17 +221,17 @@ func (b *C4ghBackend) pathListFiles() *framework.Path {
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/?$",
 		Fields: map[string]*framework.FieldSchema{
 			"project": {
-				Type:          framework.TypeLowerCaseString,
-				Description:   "Project that the header is uploaded for",
-				Required:      true,
+				Type:        framework.TypeLowerCaseString,
+				Description: "Project that the header is uploaded for",
+				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:  "Project",
+					Name: "Project",
 				},
 			},
 			"container": {
-				Type:          framework.TypeString,
-				Description:   "Container / bucket the header belongs in",
-				Required:      true,
+				Type:        framework.TypeString,
+				Description: "Container / bucket the header belongs in",
+				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Container",
 				},
@@ -691,24 +691,24 @@ Re-encrypts multiple headers at the same time, and lists the containers / bucket
 	pathContainersHelpDescription = `
 This path allows you to download re-encrypted headers in batches. Listing order of buckets is not specified.
 `
-pathContainersUpdateOperationDescription = "The request body must be a JSON object:\n```" +
-	`
+	pathContainersUpdateOperationDescription = "The request body must be a JSON object:\n```" +
+		`
 {
 "batch":   "base64 encoded JSON",
 "service": "service-name",
 "key":     "key-name"
 }
 ` + "```\nAnd the batch field must be a JSON file in the following format:\n```" +
-	`
+		`
 {
 "container": ["object"],
 "another-container": ["object", "another-object"]
 }
 `
-	pathFilesListHelpSynopsis                = `List the uploaded headers for a specific project in a specific container / bucket`
-	pathFilesListHelpDescription             = `File header listing order is not specified`
+	pathFilesListHelpSynopsis           = `List the uploaded headers for a specific project in a specific container / bucket`
+	pathFilesListHelpDescription        = `File header listing order is not specified`
 	pathFilesUpdateOperationDescription = "The header must have been encrypted with the project's public key.\nThe request JSON is in the format:\n```" +
-`
+		`
 {
 	"header": "b64encoded header",
 	"owner": "owner"

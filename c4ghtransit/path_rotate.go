@@ -20,7 +20,7 @@ func (b *C4ghBackend) pathRotate() *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:    b.pathRotateWrite,
+				Callback: b.pathRotateWrite,
 			},
 		},
 

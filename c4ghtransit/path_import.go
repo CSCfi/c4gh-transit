@@ -58,7 +58,7 @@ of rotation needs to be at least one day, or 86400 seconds.`,
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:    b.pathImportWrite,
+				Callback: b.pathImportWrite,
 			},
 		},
 		HelpSynopsis:    pathImportWriteSyn,

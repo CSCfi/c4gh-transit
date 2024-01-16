@@ -54,20 +54,20 @@ func (b *C4ghBackend) pathWhitelist() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:    b.pathWhitelistRead,
-				Summary:     "Read a public key from the whitelist",
+				Callback: b.pathWhitelistRead,
+				Summary:  "Read a public key from the whitelist",
 			},
 			logical.CreateOperation: &framework.PathOperation{
-				Callback:    b.pathWhitelistWrite,
-				Summary:     "Add a public key to the whitelist",
+				Callback: b.pathWhitelistWrite,
+				Summary:  "Add a public key to the whitelist",
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:    b.pathWhitelistWrite,
-				Summary:     "Add a public key to the whitelist",
+				Callback: b.pathWhitelistWrite,
+				Summary:  "Add a public key to the whitelist",
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback:    b.pathWhitelistDelete,
-				Summary:     "Remove a public key from the whitelist",
+				Callback: b.pathWhitelistDelete,
+				Summary:  "Remove a public key from the whitelist",
 			},
 		},
 		ExistenceCheck:  b.pathWhitelistExistenceCheck,
@@ -88,8 +88,8 @@ func (b *C4ghBackend) pathListServices() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback:    b.pathServicesList,
-				Summary:     "List services with whitelisted keys for a project",
+				Callback: b.pathServicesList,
+				Summary:  "List services with whitelisted keys for a project",
 			},
 		},
 		HelpSynopsis:    pathServicesListHelpSynopsis,
@@ -114,8 +114,8 @@ func (b *C4ghBackend) pathListWhitelistedKeys() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback:    b.pathWhitelistedKeysList,
-				Summary:     "List whitelisted keys for a service",
+				Callback: b.pathWhitelistedKeysList,
+				Summary:  "List whitelisted keys for a service",
 			},
 		},
 		HelpSynopsis:    pathWhitelistedKeysListHelpSynopsis,

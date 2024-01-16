@@ -40,7 +40,7 @@ func (b *C4ghBackend) pathBackup() *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:    b.pathBackupRead,
+				Callback: b.pathBackupRead,
 			},
 		},
 
