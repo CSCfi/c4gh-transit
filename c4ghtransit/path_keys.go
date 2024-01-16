@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/fatih/structs"
@@ -24,12 +25,17 @@ func (b *C4ghBackend) pathKeys() *framework.Path {
 			"project": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "The project a key belongs to",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Project",
+					Value: "project_2001111",
+				},
 			},
 			"flavor": {
 				Type:        framework.TypeString,
 				Default:     "ed25519",
 				Description: "Key type, ed25519 or crypt4gh",
 				Required:    true,
+				Query:       true,
 			},
 			"auto_rotate_period": {
 				Type:    framework.TypeDurationSecond,
@@ -42,9 +48,56 @@ of rotation needs to be at least one day, or 86400 seconds.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathKeyUpdate,
+				Summary:  "Create a key-pair for the project",
+				Description: "The request creates a new key for a project. " +
+					"If a key already exists, nothing happens. The request body should be empty.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {
+						{
+							Description: http.StatusText(http.StatusNoContent),
+						},
+					},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathKeyRead,
+				Callback:    b.pathKeyRead,
+				Summary:     "Retrieve the project's public key",
+				Description: "If a key doesn't yet exist, it is created and returned.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {
+						{
+							Description: http.StatusText(http.StatusOK),
+							Example: &logical.Response{
+								Data: map[string]interface{}{
+									  "allow_plaintext_backup": true,
+									  "auto_rotate_period": 0,
+									  "deletion_allowed": false,
+									  "exportable": true,
+									  "imported_key": false,
+									  "keys": map[string]interface{}{
+										"1": map[string]interface{}{
+										  "creation_time": "2022-12-05T10:54:26.405686018+02:00",
+										  "project": "ed25519",
+										  "public_key_64": "NAGGNoD65560KBO7QxiVFnjanwalx1SD/QJu3hD/LTU=",
+										  "public_key_c4gh": "-----BEGIN CRYPT4GH PUBLIC KEY-----\nKuFzMZ35PW98MwRcspIow3G1Nrvz8gnEK9c+yQgSMXc=\n-----END CRYPT4GH PUBLIC KEY-----\n",
+										  "public_key_c4gh_64": "KuFzMZ35PW98MwRcspIow3G1Nrvz8gnEK9c+yQgSMXc=",
+										},
+									  },
+									  "latest_version": 1,
+									  "min_available_version": 0,
+									  "min_decryption_version": 1,
+									  "min_encryption_version": 0,
+									  "name": "project",
+									  "supports_decryption": false,
+									  "supports_derivation": true,
+									  "supports_encryption": false,
+									  "supports_signing": true,
+									  "type": "ed25519",
+								  },
+							},
+						},
+					},
+				},
 			},
 		},
 		HelpSynopsis:    pathKeyHelpSynopsis,
@@ -57,7 +110,8 @@ func (b *C4ghBackend) pathKeysList() *framework.Path {
 		Pattern: "keys/?$",
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback: b.pathListKeys,
+				Callback:    b.pathListKeys,
+				Summary:     "List available keys",
 			},
 		},
 		HelpSynopsis:    pathKeysListHelpSynopsis,
@@ -65,7 +119,7 @@ func (b *C4ghBackend) pathKeysList() *framework.Path {
 	}
 }
 
-// Create a new key
+// pathKeyUpdate creates a new key
 func (b *C4ghBackend) pathKeyUpdate(
 	ctx context.Context,
 	req *logical.Request,
@@ -130,7 +184,7 @@ type pubKeyRet struct {
 	CreationTime    time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
-// Display key metadata, e.g. expiration, public key entry
+// pathKeyRead displays key metadata, e.g. expiration, public key entry
 func (b *C4ghBackend) pathKeyRead(
 	ctx context.Context,
 	req *logical.Request,
@@ -227,7 +281,7 @@ func (b *C4ghBackend) pathKeyRead(
 	return resp, nil
 }
 
-// List provided keys
+// pathListKeys lists available keys
 func (b *C4ghBackend) pathListKeys(
 	ctx context.Context,
 	req *logical.Request,
