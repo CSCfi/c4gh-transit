@@ -133,7 +133,7 @@ func (b *C4ghBackend) restoreFile(ctx context.Context, storage logical.Storage, 
 
 	if !skipKey {
 		if err = b.lm.RestorePolicy(ctx, storage, project, fileData.Key, force); err != nil {
-			return nil, fmt.Errorf("Could not restore encryption key: %w", err)
+			return nil, fmt.Errorf("could not restore encryption key: %w", err)
 		}
 	}
 
@@ -223,4 +223,4 @@ const (
 	pathRestoreHelpDesc = `This path is used to restore the named key, file, or whitelisted key.`
 )
 
-var ErrInvalidKeyName = errors.New("Backup type names cannot be paths")
+var ErrInvalidKeyName = errors.New("backup type names cannot be paths")
