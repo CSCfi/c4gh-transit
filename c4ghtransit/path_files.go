@@ -64,7 +64,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 			},
 			"header": {
 				Type:        framework.TypeString,
-				Description: "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin. Must be in the request body for WRITE operations.",
+				Description: "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin. Must be in the request body for update operations.",
 				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:  "Header",
@@ -73,7 +73,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 			},
 			"service": {
 				Type:        framework.TypeNameString,
-				Description: "Service that requests the file, matches the whitelist service name. Use of this parameter can be non-standard and can be present in request body for READ and DELETE operations.",
+				Description: "Service that requests the file, matches the whitelist service name. ",
 				Required:    true,
 				Query:       true,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -82,7 +82,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 			},
 			"key": {
 				Type:        framework.TypeNameString,
-				Description: "Name of whitelisted key the service wants to use. Use of this parameter is non-standard and can be present in request body for READ and DELETE operations.",
+				Description: "Name of whitelisted key the service wants to use.",
 				Required:    true,
 				Query:       true,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -91,7 +91,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 			},
 			"owner": {
 				Type:        framework.TypeLowerCaseString,
-				Description: "Project that owns the container (if the container is shared).  Use of this parameter can be non-standard and can be present in request body for READ and DELETE operations.",
+				Description: "Project that owns the container (if the container is shared).",
 				Default:     "",
 				Required:    false,
 				Query:       true,
@@ -170,7 +170,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 			},
 			"batch": {
 				Type:        framework.TypeString,
-				Description: "Base64 encoded JSON indicating headers to be re-encrypted. Use of this parameter is non-standard and can be present in request body for READ operations.",
+				Description: "Base64 encoded JSON indicating headers to be re-encrypted. Must be in the request body for update operations.",
 				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:        "Batch",
@@ -180,7 +180,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 			},
 			"service": {
 				Type:        framework.TypeNameString,
-				Description: "Service that requests the file, matches the whitelist service name. Use of this parameter is non-standard and can be present in request body for READ operations.",
+				Description: "Service that requests the file, matches the whitelist service name. Must be in the request body for update operations.",
 				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:        "Service",
@@ -190,7 +190,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 			},
 			"key": {
 				Type:        framework.TypeNameString,
-				Description: "Name of the whitelisted key the service wants to use. Use of this parameter is non-standard and can be present in request body for READ operations.",
+				Description: "Name of the whitelisted key the service wants to use. Must be in the request body for update operations.",
 				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:        "Key",
@@ -201,7 +201,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:    b.pathFilesBatchRead,
+				Callback:    b.pathFilesBatchWrite,
 				Summary:     "Batch re-encrypt headers",
 				Description: pathContainersUpdateOperationDescription,
 			},
@@ -335,8 +335,8 @@ func (b *C4ghBackend) pathFilesExistenceCheck(ctx context.Context, req *logical.
 	return resp != nil && !resp.IsError(), err
 }
 
-// pathFilesBatchRead batch re-encrypt headers
-func (b *C4ghBackend) pathFilesBatchRead(
+// pathFilesBatchWrite batch re-encrypt headers
+func (b *C4ghBackend) pathFilesBatchWrite(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
