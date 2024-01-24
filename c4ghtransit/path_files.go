@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -29,7 +30,7 @@ type fileEntryMap struct {
 	LatestVersion int                           `json:"latest_version" structs:"latest_version" mapstructure:"latest_version"`
 }
 
-// pathFiles extends fault with a c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
+// pathFiles provides c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
 func (b *C4ghBackend) pathFiles() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/" + framework.MatchAllRegex("file"),
@@ -38,51 +39,114 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 				Type:        framework.TypeLowerCaseString,
 				Description: "Project that the header is uploaded for",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Project",
+					Value: "project_2001111",
+				},
 			},
 			"container": {
 				Type:        framework.TypeString,
 				Description: "Container or bucket that the file belongs to",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Container",
+					Value: "container_name",
+				},
 			},
 			"file": {
 				Type:        framework.TypeString,
 				Description: "Full object path of the file the uploaded header belongs to",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "File",
+					Value: "path/to/object",
+				},
 			},
 			"header": {
 				Type:        framework.TypeString,
-				Description: "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin",
+				Description: "Base64 encoded string of an encrypted header encrypted with a key known to the c4gh-transit plugin. Must be in the request body for update operations.",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:  "Header",
+					Value: "b64encoded",
+				},
 			},
 			"service": {
 				Type:        framework.TypeNameString,
-				Description: "Service that requests the file, matches the whitelist service name",
+				Description: "Service that requests the file, matches the whitelist service name. ",
 				Required:    true,
+				Query:       true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Service",
+				},
 			},
 			"key": {
 				Type:        framework.TypeNameString,
-				Description: "Name of whitelisted key the service wants to use",
+				Description: "Name of whitelisted key the service wants to use.",
 				Required:    true,
+				Query:       true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Key",
+				},
 			},
 			"owner": {
 				Type:        framework.TypeLowerCaseString,
-				Description: "Project that owns the container (if the container is shared)",
+				Description: "Project that owns the container (if the container is shared).",
 				Default:     "",
 				Required:    false,
+				Query:       true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Owner",
+				},
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathFilesRead,
+				Callback:    b.pathFilesRead,
+				Summary:     "Download a re-encrypted header",
+				Description: "The header is re-encrypted with the specified **service** and **key** combination.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {
+						{
+							Description: http.StatusText(http.StatusOK),
+						},
+					},
+				},
 			},
 			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathFilesWrite,
+				Callback:    b.pathFilesWrite,
+				Summary:     "Upload an encrypted header",
+				Description: pathFilesUpdateOperationDescription,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {
+						{
+							Description: http.StatusText(http.StatusNoContent),
+						},
+					},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathFilesUpdate,
+				Callback:    b.pathFilesUpdate,
+				Summary:     "Upload an encrypted header",
+				Description: pathFilesUpdateOperationDescription,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {
+						{
+							Description: http.StatusText(http.StatusNoContent),
+						},
+					},
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathFilesDelete,
+				Summary:  "Delete an encrypted header",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {
+						{
+							Description: http.StatusText(http.StatusNoContent),
+						},
+					},
+				},
 			},
 		},
 		ExistenceCheck:  b.pathFilesExistenceCheck,
@@ -91,7 +155,7 @@ func (b *C4ghBackend) pathFiles() *framework.Path {
 	}
 }
 
-// List stored file containers
+// pathContainers list containers and batch re-encryption
 func (b *C4ghBackend) pathContainers() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/?$",
@@ -100,29 +164,50 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 				Type:        framework.TypeLowerCaseString,
 				Description: "Project that the header is uploaded for",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Project",
+				},
 			},
 			"batch": {
 				Type:        framework.TypeString,
-				Description: "JSON instructing which headers should be returned",
+				Description: "Base64 encoded JSON indicating headers to be re-encrypted. Must be in the request body for update operations.",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:        "Batch",
+					Description: "Used in the batch request",
+					Value:       "b64encoded JSON",
+				},
 			},
 			"service": {
 				Type:        framework.TypeNameString,
-				Description: "Service that requests the file, matches the whitelist service name",
+				Description: "Service that requests the file, matches the whitelist service name. Must be in the request body for update operations.",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:        "Service",
+					Description: "Used in the batch request",
+					Value:       "service-name",
+				},
 			},
 			"key": {
 				Type:        framework.TypeNameString,
-				Description: "Name of whitelisted key the service wants to use",
+				Description: "Name of the whitelisted key the service wants to use. Must be in the request body for update operations.",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:        "Key",
+					Description: "Used in the batch request",
+					Value:       "key-name",
+				},
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathFilesBatchRead,
+				Callback:    b.pathFilesBatchWrite,
+				Summary:     "Batch re-encrypt headers",
+				Description: pathContainersUpdateOperationDescription,
 			},
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathContainersList,
+				Summary:  "List all containers for a project",
 			},
 		},
 		HelpSynopsis:    pathContainersHelpSynopsis,
@@ -130,7 +215,7 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 	}
 }
 
-// List containers
+// pathListFiles List containers and files for a container
 func (b *C4ghBackend) pathListFiles() *framework.Path {
 	return &framework.Path{
 		Pattern: "files/" + framework.GenericNameRegex("project") + "/" + GenericContainerNameRegex("container") + "/?$",
@@ -139,16 +224,23 @@ func (b *C4ghBackend) pathListFiles() *framework.Path {
 				Type:        framework.TypeLowerCaseString,
 				Description: "Project that the header is uploaded for",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Project",
+				},
 			},
 			"container": {
 				Type:        framework.TypeString,
 				Description: "Container / bucket the header belongs in",
 				Required:    true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Container",
+				},
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathFilesList,
+				Summary:  "List all headers in a container",
 			},
 		},
 		HelpSynopsis:    pathFilesListHelpSynopsis,
@@ -156,11 +248,11 @@ func (b *C4ghBackend) pathListFiles() *framework.Path {
 	}
 }
 
+// pathContainersList list all containers for a project
 func (b *C4ghBackend) pathContainersList(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
-
 ) (*logical.Response, error) {
 	project := d.Get("project").(string)
 	listPath := fmt.Sprintf("files/%s/", project)
@@ -174,7 +266,7 @@ func (b *C4ghBackend) pathContainersList(
 	return logical.ListResponse(entries), nil
 }
 
-// List all headers uploaded to a specific project
+// pathFilesList list all headers uploaded to a specific project
 func (b *C4ghBackend) pathFilesList(
 	ctx context.Context,
 	req *logical.Request,
@@ -201,7 +293,7 @@ func (b *C4ghBackend) pathFilesList(
 	return logical.ListResponse(decodedEntries), nil
 }
 
-// Read a re-encrypted header
+// pathFilesRead Read a re-encrypted header
 func (b *C4ghBackend) pathFilesRead(
 	ctx context.Context,
 	req *logical.Request,
@@ -234,7 +326,7 @@ func (b *C4ghBackend) pathFilesRead(
 	return b.readFile(ctx, req, useProject, container, file64, service, keyName, project)
 }
 
-// check a file exists by trying to read it
+// pathFilesExistenceCheck check a file exists by trying to read it
 // this to decide if the operation is POST or PUT
 // see https://github.com/hashicorp/vault/issues/22173#issuecomment-1762962763
 func (b *C4ghBackend) pathFilesExistenceCheck(ctx context.Context, req *logical.Request, d *framework.FieldData) (bool, error) {
@@ -243,8 +335,8 @@ func (b *C4ghBackend) pathFilesExistenceCheck(ctx context.Context, req *logical.
 	return resp != nil && !resp.IsError(), err
 }
 
-// Read a re-encrypted header
-func (b *C4ghBackend) pathFilesBatchRead(
+// pathFilesBatchWrite batch re-encrypt headers
+func (b *C4ghBackend) pathFilesBatchWrite(
 	ctx context.Context,
 	req *logical.Request,
 	d *framework.FieldData,
@@ -421,7 +513,7 @@ func (b *C4ghBackend) readFile(
 	}, nil
 }
 
-// Write a header encrypted with a key known to the plugin
+// pathFilesWrite write a header encrypted with a key known to the plugin
 func (b *C4ghBackend) pathFilesWrite(
 	ctx context.Context,
 	req *logical.Request,
@@ -556,7 +648,7 @@ func (b *C4ghBackend) pathFilesWrite(
 	return nil, nil
 }
 
-// Write a header encrypted with a key known to the plugin
+// pathFilesUpdate write a header encrypted with a key known to the plugin
 func (b *C4ghBackend) pathFilesUpdate(
 	ctx context.Context,
 	req *logical.Request,
@@ -565,7 +657,7 @@ func (b *C4ghBackend) pathFilesUpdate(
 	return b.pathFilesWrite(ctx, req, d)
 }
 
-// Delete an encryption header from storage
+// pathFilesDelete delete an encryption header from storage
 func (b *C4ghBackend) pathFilesDelete(
 	ctx context.Context,
 	req *logical.Request,
@@ -599,6 +691,27 @@ Re-encrypts multiple headers at the same time, and lists the containers / bucket
 	pathContainersHelpDescription = `
 This path allows you to download re-encrypted headers in batches. Listing order of buckets is not specified.
 `
-	pathFilesListHelpSynopsis    = `List the uploaded headers for a specific project in a specific container / bucket`
-	pathFilesListHelpDescription = `File header listing order is not specified`
+	pathContainersUpdateOperationDescription = "The request body must be a JSON object:\n```" +
+		`
+{
+"batch":   "base64 encoded JSON",
+"service": "service-name",
+"key":     "key-name"
+}
+` + "```\nAnd the batch field must be a JSON file in the following format:\n```" +
+		`
+{
+"container": ["object"],
+"another-container": ["object", "another-object"]
+}
+`
+	pathFilesListHelpSynopsis           = `List the uploaded headers for a specific project in a specific container / bucket`
+	pathFilesListHelpDescription        = `File header listing order is not specified`
+	pathFilesUpdateOperationDescription = "The header must have been encrypted with the project's public key.\nThe request JSON is in the format:\n```" +
+		`
+{
+	"header": "b64encoded header",
+	"owner": "owner"
+}
+` + "```\nwith **owner** being an optional field."
 )

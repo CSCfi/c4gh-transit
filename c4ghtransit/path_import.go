@@ -56,8 +56,10 @@ Value of 0 (default) disables key rotation, otherwise the period
 of rotation needs to be at least one day, or 86400 seconds.`,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathImportWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathImportWrite,
+			},
 		},
 		HelpSynopsis:    pathImportWriteSyn,
 		HelpDescription: pathImportWriteDesc,

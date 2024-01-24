@@ -1,0 +1,55 @@
+# https://github.com/Huachao/vscode-restclient
+# https://docs.openstack.org/api-ref/identity/v3/
+# https://jsonpath.com/
+
+
+@vault_base_url = http://localhost:8200
+@vault_role = role
+@vault_secret = role-secret-token
+@project = project_2001111
+@service = service-c4gh
+@keyname = project-key
+
+@vaultToken = {{authRequest.response.body.auth.client_token}}
+
+### Password authentication with unscoped authorization
+# @name authRequest
+POST {{vault_base_url}}/v1/auth/approle/login
+content-type: application/json
+
+{
+  "role_id": "{{vault_role}}",
+  "secret_id": "{{vault_secret}}"
+}
+
+### create a project key (deprecated as it's created automatically)
+POST {{vault_base_url}}/v1/c4ghtransit/keys/{{project}}?flavor=crypt4gh
+X-Vault-Token: {{vaultToken}}
+Content-Type: "application/json
+
+### get a key
+GET {{vault_base_url}}/v1/c4ghtransit/keys/{{project}}
+X-Vault-Token: {{vaultToken}}
+Accept: application/json
+
+### whitelist a key
+POST {{vault_base_url}}/v1/c4ghtransit/whitelist/{{project}}/{{service}}/{{keyname}}
+X-Vault-Token: {{vaultToken}}
+Accept: application/json
+Content-Type: "application/json
+
+{
+  "flavor": "crypt4gh",
+  "pubkey": "{{b64_pubkey}}"
+}
+
+### batch get files
+POST {{vault_base_url}}/v1/c4ghtransit/files/{{project}}
+X-Vault-Token: {{vaultToken}}
+Accept: application/json
+
+{
+  "batch": "{{batch_request}}",
+  "service": "{{service}}",
+  "key": "{{keyname}}"
+}
