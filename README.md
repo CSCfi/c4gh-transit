@@ -53,7 +53,7 @@ docker run --rm \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    golang:1.20-alpine \
+    golang:1.21-alpine \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
