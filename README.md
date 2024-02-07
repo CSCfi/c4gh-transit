@@ -53,7 +53,7 @@ docker run --rm \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    golang:1.20-alpine \
+    golang:1.21-alpine \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
@@ -108,6 +108,8 @@ chown vault:vault /vault/plugins-folder/c4ghtransit-<version>
 ```
 
 Artifactory provides checksums for their binaries. Select a binary [from this page](https://sds-docker.artifactory.ci.csc.fi/artifactory/webapp/#/artifacts/browse/tree/General/sds-generic-local/c4gh-transit/c4ghtransit), find the checksum on the right-hand side, at the bottom under "Checksums".
+
+Github Release also provides the artifacts for download.
 
 Otherwise, calculate the checksum with `sha256sum c4ghtransit-<version>`.
 

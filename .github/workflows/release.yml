@@ -1,0 +1,53 @@
+name: Release
+on:
+  push:
+    tags:
+      - "*.*.*"
+
+jobs:
+  create_release:
+    name: Create release
+    runs-on: ubuntu-22.04
+    outputs:
+      id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Release ${{ github.ref_name }} of c4gh-transit plugin for Hashicorp Vault.
+            Download artifacts below.
+
+  build_fuse_cli_release:
+    name: Upload FUSE CLI Release Asset
+    needs: create_release
+    strategy:
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-22.04]
+        golang-version: ["1.21"]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Golang ${{ matrix.golang-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.golang-version }}
+      - name: Build c4gh-transit artifact
+        run: |
+          CGO_ENABLED=0 go build -tags netgo -a -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./output/c4ghtransit 
+          fail_on_unmatched_files: true

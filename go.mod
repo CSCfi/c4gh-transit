@@ -1,6 +1,6 @@
 module github.com/cscfi/c4gh-transit/c4ghtransit
 
-go 1.20
+go 1.21
 
 require (
 	github.com/CSCfi/vault-testing-stepwise v0.5.2
