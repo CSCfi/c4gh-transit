@@ -219,6 +219,8 @@ github.com/neicnordic/crypt4gh v1.8.10 h1:oAmmV84OVpmHP2APn5inv8v3Ep2iIofKVUdfS9
 github.com/neicnordic/crypt4gh v1.8.10/go.mod h1:9jve3/N4BQTdiO6cnWqwg/4xQic6dQzPSPZqfAu9GBo=
 github.com/neicnordic/crypt4gh v1.8.11 h1:OS3AQJfQ2MiEzrD5kqVf2B872qpksEOYYyAVx0g0MuQ=
 github.com/neicnordic/crypt4gh v1.8.11/go.mod h1:6GKPoKbTMXhtEnRlY0LMR+LQ+a3XMBQ5iiz/O8nzFAM=
+github.com/neicnordic/crypt4gh v1.9.1 h1:NKeOmsZ1/0xDpLvBDjN8Ltoh3ODbLB+NeKulDaNo4Oc=
+github.com/neicnordic/crypt4gh v1.9.1/go.mod h1:C8jHyUkt3bnQg0EwdRRswzvLXfu4dyLQOPARDIQTU24=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=
 github.com/oklog/run v1.1.0 h1:GEenZ1cK0+q0+wsJew9qUg/DyD8k3JzYsZAi5gYi2mA=
 github.com/oklog/run v1.1.0/go.mod h1:sVPdnTZT1zYwAJeCMu2Th4T21pA3FPOQRfWjQlk7DVU=
@@ -294,6 +296,8 @@ golang.org/x/crypto v0.18.0 h1:PGVlW0xEltQnzFZ55hkuX5+KLyrMYhHld1YHO4AKcdc=
 golang.org/x/crypto v0.18.0/go.mod h1:R0j02AL6hcrfOiy9T4ZYp/rcWeMxM3L6QYxlOuEG1mg=
 golang.org/x/crypto v0.19.0 h1:ENy+Az/9Y1vSrlrvBSyna3PITt4tiZLf7sgCjZBX7Wo=
 golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
+golang.org/x/crypto v0.20.0 h1:jmAMJJZXr5KiCw05dfYK9QnqaqKLYXijU23lsEdcQqg=
+golang.org/x/crypto v0.20.0/go.mod h1:Xwo95rrVNIoSMx9wa1JroENMToLWn3RNVrTBpLHgZPQ=
 golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/mod v0.3.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=
 golang.org/x/mod v0.11.0 h1:bUO06HqtnRcc/7l71XBe4WcqTZ+3AH1J59zWDDwLKgU=
