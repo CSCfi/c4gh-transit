@@ -482,7 +482,7 @@ func testC4ghStepwiseWriteKey(_ *testing.T, project string) stepwise.Step {
 		Operation: stepwise.WriteOperation,
 		Data:      map[string]interface{}{"flavor": "crypt4gh"},
 		Path:      fmt.Sprintf("/keys/%s", project),
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -628,7 +628,7 @@ func testC4ghStepwiseWriteWhitelist(_ *testing.T, project string, service string
 		Operation: stepwise.WriteOperation,
 		Data:      map[string]interface{}{"flavor": "crypt4gh", "pubkey": publicKey},
 		Path:      fmt.Sprintf("/whitelist/%s/%s/%s", project, service, keyName),
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -664,7 +664,7 @@ func testC4ghStepwiseWriteSharingWhitelist(_ *testing.T, project string, contain
 				"idkeystone": otherProjectID,
 			}, nil
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -681,7 +681,7 @@ func testC4ghStepwiseWriteSharingWhitelistFail(_ *testing.T, project string, con
 				"idkeystone": otherProjectID,
 			}, nil
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			if err == nil {
 				return fmt.Errorf("function should've failed")
 			}
@@ -719,7 +719,7 @@ func testC4ghStepwiseDeleteSharingWhitelist(_ *testing.T, project string, contai
 		BodyData: map[string][]string{
 			"id": {otherProject},
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -733,7 +733,7 @@ func testC4ghStepwiseDeleteSharingWhitelistFail(_ *testing.T, project string, co
 		BodyData: map[string][]string{
 			"id": {otherProject},
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			if err == nil {
 				return fmt.Errorf("function should've failed")
 			}
@@ -765,7 +765,7 @@ func testC4ghStepwiseWriteFile(_ *testing.T, project, container, path string, ot
 
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -796,7 +796,7 @@ func testC4ghStepwiseWriteSharedFile(_ *testing.T, project, container, path stri
 				"owner":  owner,
 			}, nil
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -910,7 +910,7 @@ func testC4hgStepwiseReadShareFileFail(_ *testing.T, project string, container s
 			"key":     {keyName},
 			"owner":   {owner},
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			if err == nil {
 				return fmt.Errorf("function should've failed")
 			}
@@ -1043,7 +1043,7 @@ func testC4ghStepwiseWriteFileFail(_ *testing.T, project, container, path string
 
 			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			if err == nil {
 				return fmt.Errorf("Function should have failed")
 			}
@@ -1058,7 +1058,7 @@ func testC4ghStepwiseRotate(_ *testing.T, project string) stepwise.Step {
 		Name:      "testC4ghStepwiseRotate",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/keys/%s/rotate", project),
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -1069,7 +1069,7 @@ func testC4ghStepwiseRewrap(_ *testing.T, project string) stepwise.Step {
 		Name:      "testC4ghStepwiseRewrap",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/rewrap/%s", project),
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -1151,7 +1151,7 @@ func testC4ghStepwiseDeleteFile(_ *testing.T, project string, container string, 
 			"service": {service},
 			"key":     {keyName},
 		},
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
@@ -1185,7 +1185,7 @@ func testC4ghStepwiseDeleteWhitelist(_ *testing.T, project string, service strin
 		Name:      "testC4ghStepwiseDeleteWhitelist",
 		Operation: stepwise.DeleteOperation,
 		Path:      fmt.Sprintf("whitelist/%s/%s/%s", project, service, name),
-		Assert: func(resp *api.Secret, err error) error {
+		Assert: func(_ *api.Secret, err error) error {
 			return err
 		},
 	}
