@@ -5,6 +5,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- dockerfile golang tag for 1.21 image
+
 ## [2024.02.2] - 2024-02-07
 
 ### Added
