@@ -164,7 +164,7 @@ release:
     - job: build-openapi
       artifacts: true
   release:
-    description: "Vault crypt4gh-transit plugin - automated release"
+    description: $(cat release_changes.md)
     assets:
       links:
         - name: c4ghtransit-${RELEASE_VERSION} (artifactory)
