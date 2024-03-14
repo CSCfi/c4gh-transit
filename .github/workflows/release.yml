@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Create release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
@@ -46,7 +46,7 @@ jobs:
           CGO_ENABLED=0 go build -tags netgo -a -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
       - name: Upload Release Asset
         id: upload-release-asset
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ./output/c4ghtransit 
