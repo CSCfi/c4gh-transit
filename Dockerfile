@@ -1,4 +1,4 @@
-FROM golang:1.21 as PLUGIN
+FROM golang:1.22 as PLUGIN
 
 WORKDIR /usr/src
 
@@ -12,7 +12,7 @@ RUN apt-get -y update && \
 COPY . .
 RUN go build -ldflags=-w -v -o /usr/local/bin/c4ghtransit ./c4ghtransit/cmd/c4ghtransit/main.go
 
-FROM golang:1.21
+FROM golang:1.22
 
 RUN apt-get -y update && \
     apt-get -y upgrade && \
