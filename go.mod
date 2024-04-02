@@ -7,10 +7,10 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/vault/api v1.12.1
+	github.com/hashicorp/vault/api v1.12.2
 	github.com/hashicorp/vault/sdk v0.11.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/neicnordic/crypt4gh v1.9.1
+	github.com/neicnordic/crypt4gh v1.10.0
 	golang.org/x/crypto v0.21.0
 	gotest.tools v2.2.0+incompatible
 )
@@ -39,7 +39,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
-	github.com/google/tink/go v1.7.0 // indirect
+	github.com/google/tink/go v1.6.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
