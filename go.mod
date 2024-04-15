@@ -3,7 +3,7 @@ module github.com/cscfi/c4gh-transit/c4ghtransit
 go 1.21
 
 require (
-	github.com/CSCfi/vault-testing-stepwise v0.5.5
+	github.com/CSCfi/vault-testing-stepwise v0.6.2
 	github.com/fatih/structs v1.1.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-multierror v1.1.1
@@ -14,6 +14,10 @@ require (
 	golang.org/x/crypto v0.22.0
 	gotest.tools v2.2.0+incompatible
 )
+
+// fix this version untill issues with
+// github.com/hashicorp/go-secure-stdlib/plugincontainer are fixed regarding docker
+replace github.com/CSCfi/vault-testing-stepwise => github.com/CSCfi/vault-testing-stepwise v0.5.5
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
