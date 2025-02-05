@@ -134,7 +134,7 @@ func (b *C4ghBackend) backupFile(ctx context.Context, storage logical.Storage, p
 		return "", err
 	}
 	if containers == nil {
-		return "", fmt.Errorf(fmt.Sprintf("Project %q not found", project))
+		return "", fmt.Errorf("project %q not found", project)
 	}
 
 	backup := map[string]interface{}{"backup_time": time.Now(), "name": project}
@@ -194,7 +194,7 @@ func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Stora
 		return "", err
 	}
 	if services == nil {
-		return "", fmt.Errorf(fmt.Sprintf("No whitelisted keys found for %q", project))
+		return "", fmt.Errorf("no whitelisted keys found for %q", project)
 	}
 
 	backup := map[string]interface{}{"backup_time": time.Now(), "name": project}
