@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -377,7 +377,7 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 				return nil, err
 			}
 			for _, pattern := range batchJSON[container] {
-				match, err := filepath.Match(pattern, string(decodedEntry))
+				match, err := doublestar.Match(pattern, string(decodedEntry))
 				if err != nil {
 					return nil, err
 				}
