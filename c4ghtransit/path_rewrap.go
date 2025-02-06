@@ -45,7 +45,7 @@ func (b *C4ghBackend) pathRewrapWrite(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 	if containers == nil {
-		return nil, fmt.Errorf(fmt.Sprintf("Project %q not found", project))
+		return nil, fmt.Errorf("project %q not found", project)
 	}
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{

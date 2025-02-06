@@ -377,14 +377,16 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 	keyName := "fake-key-name"
 	container := "bucket"
 	container2 := "bucket-2"
-	path := "hidden-in-a-bucket.txt.c4gh"
+	container3 := "bucket-3"
+	path := "dir/hidden-in-a-bucket.txt.c4gh"
 	path2 := "hidden-in-a-bucket2.txt.c4gh"
 	path3 := "hidden-in-a-bucket3.txt.c4gh"
 
-	reference := map[string][]string{container: {path, path2}, container2: {path}}
+	reference := map[string][]string{container: {path, path2}, container2: {}, container3: {path, path3}}
 	batch := make(map[string][]string)
-	batch[container] = []string{"*bucket.*", path2}
-	batch[container2] = []string{path}
+	batch[container] = []string{"*/*bucket.*", path2}
+	batch[container2] = []string{"*bucket.*"}
+	batch[container3] = []string{"**"}
 	b, err := json.Marshal(batch)
 	if err != nil {
 		fmt.Println(err)
@@ -413,6 +415,10 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 			testC4ghStepwiseWriteFile(t, project, container, path3),
 			// Upload another encrypted file
 			testC4ghStepwiseWriteFile(t, project, container2, path),
+			// Upload another encrypted file
+			testC4ghStepwiseWriteFile(t, project, container3, path),
+			// Upload another encrypted file
+			testC4ghStepwiseWriteFile(t, project, container3, path3),
 			// Create a project key
 			testC4ghStepwiseWriteKey(t, project2),
 			// Get the project key
