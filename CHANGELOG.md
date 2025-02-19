@@ -7,8 +7,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ## [Unreleased]
 
+## [2025.2.0] - 2025-02-19
+
 ### Fixed
 
+- automatic releases
 - dockerfile golang tag for 1.21 image
 
 ### Changed
@@ -333,7 +336,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 - fix some linting mises
 - fix incorrect key usage in file ingestion and export
 
-[Unreleased]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.2...HEAD
+[Unreleased]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2025.2.0...HEAD
+[2025.2.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.2...2025.2.0
 [2024.02.2]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.1...2024.02.2
 [2024.02.1]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.0...2024.02.1
 [2024.02.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.01.4...2024.02.0
