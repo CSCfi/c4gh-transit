@@ -13,6 +13,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ### Changed
 
+- update golang Docker tag to v1.24
 - batch request supports the use of pattern `**`, which matches against any character
 
 ## [2024.02.2] - 2024-02-07
