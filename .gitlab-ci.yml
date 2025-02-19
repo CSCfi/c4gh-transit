@@ -159,6 +159,9 @@ release:
   needs:
     - job: prepare-release
       artifacts: true
+    - job: generate-changelog
+      artifacts: true
+      optional: true
     - job: build-binary
       artifacts: true
     - job: build-openapi
