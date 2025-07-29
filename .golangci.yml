@@ -1,0 +1,20 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - gocritic
+    - gosec
+    - govet
+    - nestif
+    - nlreturn
+    - revive
+    - rowserrcheck
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+formatters:
+  enable:
+    - gofmt
