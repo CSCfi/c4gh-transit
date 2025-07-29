@@ -7,6 +7,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- update CI to use golangci-lint v2 (#20)
+
 ## [2025.2.0] - 2025-02-19
 
 ### Fixed
