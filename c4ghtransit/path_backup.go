@@ -121,7 +121,7 @@ func (b *C4ghBackend) pathBackupRead(ctx context.Context, req *logical.Request, 
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"backup": backup,
 		},
 	}, nil
@@ -137,7 +137,7 @@ func (b *C4ghBackend) backupFile(ctx context.Context, storage logical.Storage, p
 		return "", fmt.Errorf("project %q not found", project)
 	}
 
-	backup := map[string]interface{}{"backup_time": time.Now(), "name": project}
+	backup := map[string]any{"backup_time": time.Now(), "name": project}
 	fileData := make(map[string][]backupFileEntry, len(containers))
 
 	for _, c := range containers {
@@ -197,7 +197,7 @@ func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Stora
 		return "", fmt.Errorf("no whitelisted keys found for %q", project)
 	}
 
-	backup := map[string]interface{}{"backup_time": time.Now(), "name": project}
+	backup := map[string]any{"backup_time": time.Now(), "name": project}
 	entries := make([]transitWhitelistEntrySansProject, 0, len(services))
 	for _, s := range services {
 		service := strings.TrimSuffix(s, "/")

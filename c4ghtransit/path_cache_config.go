@@ -97,7 +97,7 @@ func (b *C4ghBackend) pathCacheConfigRead(ctx context.Context, req *logical.Requ
 	}
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"size": storedCacheSize,
 		},
 	}

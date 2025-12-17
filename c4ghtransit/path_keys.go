@@ -40,8 +40,8 @@ func (b *C4ghBackend) pathKeys() *framework.Path {
 			"auto_rotate_period": {
 				Type:    framework.TypeDurationSecond,
 				Default: 0,
-				Description: `The amount of time after which key will be rotated. 
-Value of 0 (default) disables key rotation, otherwise the period 
+				Description: `The amount of time after which key will be rotated.
+Value of 0 (default) disables key rotation, otherwise the period
 of rotation needs to be at least one day, or 86400 seconds.`,
 			},
 		},
@@ -68,14 +68,14 @@ of rotation needs to be at least one day, or 86400 seconds.`,
 						{
 							Description: http.StatusText(http.StatusOK),
 							Example: &logical.Response{
-								Data: map[string]interface{}{
+								Data: map[string]any{
 									"allow_plaintext_backup": true,
 									"auto_rotate_period":     0,
 									"deletion_allowed":       false,
 									"exportable":             true,
 									"imported_key":           false,
-									"keys": map[string]interface{}{
-										"1": map[string]interface{}{
+									"keys": map[string]any{
+										"1": map[string]any{
 											"creation_time":      "2022-12-05T10:54:26.405686018+02:00",
 											"project":            "ed25519",
 											"public_key_64":      "NAGGNoD65560KBO7QxiVFnjanwalx1SD/QJu3hD/LTU=",
@@ -213,7 +213,7 @@ func (b *C4ghBackend) pathKeyRead(
 	defer p.Unlock()
 
 	resp := &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"name":                   p.Name,
 			"type":                   p.Type.String(),
 			"deletion_allowed":       p.DeletionAllowed,
@@ -241,19 +241,19 @@ func (b *C4ghBackend) pathKeyRead(
 	}
 
 	if p.BackupInfo != nil {
-		resp.Data["backup_info"] = map[string]interface{}{
+		resp.Data["backup_info"] = map[string]any{
 			"time":    p.BackupInfo.Time,
 			"version": p.BackupInfo.Version,
 		}
 	}
 	if p.RestoreInfo != nil {
-		resp.Data["restore_info"] = map[string]interface{}{
+		resp.Data["restore_info"] = map[string]any{
 			"time":    p.RestoreInfo.Time,
 			"version": p.RestoreInfo.Version,
 		}
 	}
 
-	retKeys := map[string]map[string]interface{}{}
+	retKeys := map[string]map[string]any{}
 	for k, v := range p.Keys {
 		var c4ghPublicKey [chacha20poly1305.KeySize]byte
 		publicKey, err := base64.StdEncoding.DecodeString(v.FormattedPublicKey)

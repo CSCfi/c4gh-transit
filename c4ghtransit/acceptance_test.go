@@ -486,7 +486,7 @@ func testC4ghStepwiseWriteKey(_ *testing.T, project string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteKey",
 		Operation: stepwise.WriteOperation,
-		Data:      map[string]interface{}{"flavor": "crypt4gh"},
+		Data:      map[string]any{"flavor": "crypt4gh"},
 		Path:      fmt.Sprintf("/keys/%s", project),
 		Assert: func(_ *api.Secret, err error) error {
 			return err
@@ -528,7 +528,7 @@ func testC4ghStepwiseReadKey(t *testing.T, project string) stepwise.Step {
 	}
 }
 
-func decodeJSON(encodedString string) (map[string]interface{}, error) {
+func decodeJSON(encodedString string) (map[string]any, error) {
 	bytes, err := base64.StdEncoding.DecodeString(encodedString) // Converting data
 
 	if err != nil {
@@ -537,7 +537,7 @@ func decodeJSON(encodedString string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	var decodedJSON map[string]interface{}
+	var decodedJSON map[string]any
 	err = json.Unmarshal(bytes, &decodedJSON)
 	if err != nil {
 		fmt.Println("Failed to parse JSON", err)
@@ -608,7 +608,7 @@ func testC4ghStepwiseReadBackuplist(t *testing.T, backupType string, project str
 			}
 
 			var data struct {
-				Keys []interface{} `mapstructure:"keys"`
+				Keys []any `mapstructure:"keys"`
 			}
 			if err = mapstructure.Decode(resp.Data, &data); err != nil {
 				return fmt.Errorf("failed decoding to mapstructure")
@@ -632,7 +632,7 @@ func testC4ghStepwiseWriteWhitelist(_ *testing.T, project string, service string
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteWhitelist",
 		Operation: stepwise.WriteOperation,
-		Data:      map[string]interface{}{"flavor": "crypt4gh", "pubkey": publicKey},
+		Data:      map[string]any{"flavor": "crypt4gh", "pubkey": publicKey},
 		Path:      fmt.Sprintf("/whitelist/%s/%s/%s", project, service, keyName),
 		Assert: func(_ *api.Secret, err error) error {
 			return err
@@ -664,8 +664,8 @@ func testC4ghStepwiseWriteSharingWhitelist(_ *testing.T, project string, contain
 		Name:      "testC4ghStepwiseWriteSharingWhitelist",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/sharing/%s/%s", project, container),
-		GetData: func() (map[string]interface{}, error) {
-			return map[string]interface{}{
+		GetData: func() (map[string]any, error) {
+			return map[string]any{
 				"id":         otherProject,
 				"idkeystone": otherProjectID,
 			}, nil
@@ -681,8 +681,8 @@ func testC4ghStepwiseWriteSharingWhitelistFail(_ *testing.T, project string, con
 		Name:      "testC4ghStepwiseWriteSharingWhitelistFail",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/sharing/%s/%s", project, container),
-		GetData: func() (map[string]interface{}, error) {
-			return map[string]interface{}{
+		GetData: func() (map[string]any, error) {
+			return map[string]any{
 				"id":         otherProject,
 				"idkeystone": otherProjectID,
 			}, nil
@@ -754,7 +754,7 @@ func testC4ghStepwiseWriteFile(_ *testing.T, project, container, path string, ot
 		Name:      "testC4ghStepwiseWriteFile",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
-		GetData: func() (map[string]interface{}, error) {
+		GetData: func() (map[string]any, error) {
 			byteContent := []byte(content)
 			if len(otherContent) > 0 {
 				byteContent = []byte(otherContent[0])
@@ -769,7 +769,7 @@ func testC4ghStepwiseWriteFile(_ *testing.T, project, container, path string, ot
 				encryptedFiles[project+"/"+container+"/"+path] = encryptedBody
 			}
 
-			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
+			return map[string]any{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
 		Assert: func(_ *api.Secret, err error) error {
 			return err
@@ -782,7 +782,7 @@ func testC4ghStepwiseWriteSharedFile(_ *testing.T, project, container, path stri
 		Name:      "testC4ghStepwiseWriteSharedFile",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
-		GetData: func() (map[string]interface{}, error) {
+		GetData: func() (map[string]any, error) {
 			byteContent := []byte(content)
 			if len(otherContent) > 0 {
 				byteContent = []byte(otherContent[0])
@@ -797,7 +797,7 @@ func testC4ghStepwiseWriteSharedFile(_ *testing.T, project, container, path stri
 				encryptedFiles[owner+"/"+container+"/"+path] = encryptedBody
 			}
 
-			return map[string]interface{}{
+			return map[string]any{
 				"header": base64.StdEncoding.EncodeToString(encryptedHeader),
 				"owner":  owner,
 			}, nil
@@ -932,7 +932,7 @@ func testC4ghStepwiseReadFiles(t *testing.T, project, batch string, reference ma
 		Name:      "testC4ghStepwiseReadFiles",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s", project),
-		Data:      map[string]interface{}{"batch": batch, "service": service, "key": keyName},
+		Data:      map[string]any{"batch": batch, "service": service, "key": keyName},
 		Assert: func(resp *api.Secret, err error) error {
 			if err != nil {
 				return err
@@ -1038,7 +1038,7 @@ func testC4ghStepwiseWriteFileFail(_ *testing.T, project, container, path string
 		Name:      "testC4ghStepwiseWriteFileFail",
 		Operation: stepwise.WriteOperation,
 		Path:      fmt.Sprintf("/files/%s/%s/%s", project, container, path),
-		GetData: func() (map[string]interface{}, error) {
+		GetData: func() (map[string]any, error) {
 			encryptedHeader, encryptedBody, err := encryptFile(oldKey, []byte(content))
 			if err != nil {
 				fmt.Println("Failed encrypting file: ", err)
@@ -1047,7 +1047,7 @@ func testC4ghStepwiseWriteFileFail(_ *testing.T, project, container, path string
 			}
 			encryptedFiles[project+"/"+container+"/"+path] = encryptedBody
 
-			return map[string]interface{}{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
+			return map[string]any{"header": base64.StdEncoding.EncodeToString(encryptedHeader)}, nil
 		},
 		Assert: func(_ *api.Secret, err error) error {
 			if err == nil {

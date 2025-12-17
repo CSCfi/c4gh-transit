@@ -357,7 +357,7 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 	}
 
 	resp := &logical.Response{}
-	resp.Data = make(map[string]interface{})
+	resp.Data = make(map[string]any)
 	for container := range batchJSON {
 		listPath := fmt.Sprintf("files/%s/%s/", project, container)
 		entries, err := req.Storage.List(ctx, listPath)
@@ -370,7 +370,7 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 			found[pattern] = false
 		}
 
-		resps := map[string]interface{}{}
+		resps := map[string]any{}
 		for _, entry := range entries {
 			decodedEntry, err := base64.StdEncoding.DecodeString(entry)
 			if err != nil {
@@ -506,7 +506,7 @@ func (b *C4ghBackend) readFile(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"headers":        result.Headers,
 			"latest_version": result.LatestVersion,
 		},
