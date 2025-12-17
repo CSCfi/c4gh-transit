@@ -38,7 +38,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Set up Golang ${{ matrix.golang-version }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.golang-version }}
       - name: Build c4gh-transit artifact
