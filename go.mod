@@ -13,12 +13,9 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/neicnordic/crypt4gh v1.14.0
 	golang.org/x/crypto v0.47.0
+	golang.org/x/sync v0.19.0
 	gotest.tools v2.2.0+incompatible
 )
-
-// fix this version untill issues with
-// github.com/hashicorp/go-secure-stdlib/plugincontainer are fixed regarding docker
-replace github.com/CSCfi/vault-testing-stepwise => github.com/CSCfi/vault-testing-stepwise v0.9.0
 
 require (
 	cloud.google.com/go/auth v0.14.1 // indirect

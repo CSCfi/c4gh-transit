@@ -10,11 +10,17 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/sync/errgroup"
 )
 
 type backupFileEntry struct {
 	Filename string       `json:"filename"`
 	Entry    fileEntryMap `json:"entry"`
+}
+
+type backupFileResult struct {
+	container string
+	entries   string
 }
 
 type transitWhitelistEntrySansProject struct {
@@ -35,6 +41,10 @@ func (b *C4ghBackend) pathBackup() *framework.Path {
 			"type": {
 				Type:        framework.TypeString,
 				Description: "'keys', 'files', or 'whitelist' if user wishes to backup a key, a file or a whitelisted key",
+			},
+			"limit": {
+				Type:        framework.TypeInt,
+				Description: "The maximum size of one backup chunk. Only applicable for files",
 			},
 		},
 
@@ -103,17 +113,18 @@ func (b *C4ghBackend) pathBackupRead(ctx context.Context, req *logical.Request, 
 	contentType := d.Get("type").(string)
 	project := d.Get("project").(string)
 
-	var backup string
+	var backup any
 	var err error
 	switch contentType {
 	case "keys":
 		backup, err = b.lm.BackupPolicy(ctx, req.Storage, project)
 	case "files":
-		backup, err = b.backupFile(ctx, req.Storage, project)
+		limit := d.Get("limit").(int)
+		backup, err = b.backupFiles(ctx, req.Storage, project, limit)
 	case "whitelist":
 		backup, err = b.backupWhitelist(ctx, req.Storage, project)
 	default:
-		return logical.ErrorResponse("Backup type not supported."), nil
+		return logical.ErrorResponse("Backup type not supported"), nil
 	}
 
 	if err != nil {
@@ -127,64 +138,128 @@ func (b *C4ghBackend) pathBackupRead(ctx context.Context, req *logical.Request, 
 	}, nil
 }
 
-func (b *C4ghBackend) backupFile(ctx context.Context, storage logical.Storage, project string) (string, error) {
+func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, project string, sizeLimit int) ([]string, error) {
 	listPath := fmt.Sprintf("files/%s/", project)
 	containers, err := storage.List(ctx, listPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if containers == nil {
-		return "", fmt.Errorf("project %q not found", project)
-	}
-
-	backup := map[string]any{"backup_time": time.Now(), "name": project}
-	fileData := make(map[string][]backupFileEntry, len(containers))
-
-	for _, c := range containers {
-		container := strings.TrimSuffix(c, "/")
-		listPath = fmt.Sprintf("files/%s/%s/", project, container)
-		files, err := storage.List(ctx, listPath)
-		if err != nil {
-			return "", err
-		}
-		if files == nil {
-			continue
-		}
-
-		entries := make([]backupFileEntry, 0, len(files))
-		for _, file := range files {
-			filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file)
-			entry, err := storage.Get(ctx, filePath)
-			if err != nil {
-				return "", err
-			}
-			if entry != nil {
-				var result fileEntryMap
-				if err := entry.DecodeJSON(&result); err != nil {
-					return "", err
-				}
-
-				entries = append(entries, backupFileEntry{file, result})
-			}
-		}
-
-		fileData[container] = entries
+		return nil, fmt.Errorf("project %q not found", project)
 	}
 
 	keyBackup, err := b.lm.BackupPolicy(ctx, storage, project)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	backup["archived_files"] = fileData
-	backup["encryption_key"] = keyBackup
+	backupBase := `{
+		"backup_time": "` + time.Now().Format(time.RFC3339Nano) + `",
+		"name": "` + project + `",
+		"encryption_key": "` + keyBackup + `",
+		"archived_files": {%s}
+	}`
 
-	encodedBackup, err := jsonutil.EncodeJSON(backup)
+	backupBaseStr := fmt.Sprintf(backupBase, "")
+	encodedBackupBase, err := jsonutil.EncodeJSON(backupBaseStr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return base64.StdEncoding.EncodeToString(encodedBackup), nil
+	batches := []string{}
+	minBatchSize := len(encodedBackupBase)
+
+	ctxCancellable, cancel := context.WithCancelCause(ctx)
+	g, ctxGroup := errgroup.WithContext(ctxCancellable)
+
+	defer cancel(nil)
+
+	// Results per container are sent to the following goroutine via this channel
+	respc := make(chan backupFileResult)
+	wait := make(chan error)
+
+	go func() {
+		currentSize := minBatchSize
+		fileData := ""
+
+		addToBatches := func() {
+			backupStr := fmt.Sprintf(backupBase, fileData[:max(0, len(fileData)-1)])
+			batches = append(batches, base64.StdEncoding.EncodeToString([]byte(backupStr)))
+
+			currentSize = minBatchSize
+			fileData = ""
+		}
+
+		for next := range respc {
+			nextSize := 4 * ((len(next.entries) + len(next.container) + 4 + 2) / 3)
+			if minBatchSize+nextSize > sizeLimit {
+				cancel(fmt.Errorf("container %s is too large (~%d bytes)", next.container, nextSize))
+
+				break
+			}
+			if currentSize+nextSize > sizeLimit {
+				addToBatches()
+			}
+
+			fileData += fmt.Sprintf("\"%s\":%s,", next.container, next.entries)
+			currentSize += nextSize
+		}
+
+		addToBatches()
+		wait <- nil
+	}()
+
+	for _, c := range containers {
+		g.Go(func() error {
+			container := strings.TrimSuffix(c, "/")
+			listPath = fmt.Sprintf("files/%s/%s/", project, container)
+			files, err := storage.List(ctx, listPath)
+			if err != nil {
+				return err
+			}
+			if files == nil {
+				return nil
+			}
+
+			entries := make([]backupFileEntry, 0, len(files))
+			for _, file := range files {
+				filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file)
+				entry, err := storage.Get(ctx, filePath)
+				if err != nil {
+					return err
+				}
+				if entry != nil {
+					var result fileEntryMap
+					if err := entry.DecodeJSON(&result); err != nil {
+						return err
+					}
+
+					entries = append(entries, backupFileEntry{file, result})
+				}
+			}
+
+			encodedEntries, err := jsonutil.EncodeJSON(entries)
+			if err != nil {
+				return err
+			}
+
+			select {
+			case respc <- backupFileResult{container: container, entries: string(encodedEntries)}:
+			case <-ctxGroup.Done():
+				return context.Cause(ctxGroup)
+			}
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	close(respc)
+	<-wait
+
+	return batches, nil
 }
 
 func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Storage, project string) (string, error) {
@@ -197,7 +272,7 @@ func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Stora
 		return "", fmt.Errorf("no whitelisted keys found for %q", project)
 	}
 
-	backup := map[string]any{"backup_time": time.Now(), "name": project}
+	backup := WhitelistData{Time: time.Now(), Name: project}
 	entries := make([]transitWhitelistEntrySansProject, 0, len(services))
 	for _, s := range services {
 		service := strings.TrimSuffix(s, "/")
@@ -224,7 +299,7 @@ func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Stora
 		}
 	}
 
-	backup["archived_whitelist"] = entries
+	backup.Whitelisted = entries
 	encodedBackup, err := jsonutil.EncodeJSON(backup)
 	if err != nil {
 		return "", err

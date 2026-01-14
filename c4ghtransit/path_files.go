@@ -22,8 +22,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const numRoutines = 10
-
 type reencryptFileEntry struct {
 	Header     string    `json:"header" structs:"header" mapstructure:"header"`
 	Keyversion int       `json:"keyversion" structs:"keyversion" mapstructure:"keyversion"`
@@ -372,7 +370,6 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 	resp.Data = make(map[string]any)
 
 	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(numRoutines)
 
 	// Results per container are sent to the main goroutine via this channel
 	respc := make(chan batchResult)

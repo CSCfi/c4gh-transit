@@ -1002,14 +1002,14 @@ func testC4ghStepwiseReadBackupFile(t *testing.T, project string) stepwise.Step 
 			}
 
 			var data struct {
-				Backup string `mapstructure:"backup"`
+				Backup string `mapstructure:"backup_1/1"`
 			}
 			if err = mapstructure.Decode(resp.Data, &data); err != nil {
 				fmt.Println("failed decoding to mapstructure")
 
 				return err
 			}
-			assert.Assert(t, cmp.Contains(resp.Data, "backup"), fmt.Sprintf("Response did not contain expected backup: %s", resp.Data))
+			assert.Assert(t, cmp.Contains(resp.Data, "backup_1/1"), fmt.Sprintf("Response did not contain expected backup: %s", resp.Data))
 
 			backupData, err := decodeJSON(data.Backup)
 			if err != nil {
