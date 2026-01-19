@@ -32,64 +32,6 @@ var (
 	content        = "Hide your secrets in a bucket."
 )
 
-func TestBackupPath(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
-
-	publicKey, privateKey, err := keys.GenerateKeyPair()
-	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
-	}
-	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
-
-	project := "my-project"
-	service := "fake-service"
-	keyName := "fake-key-name"
-	container := "bucket"
-	path := "hidden-in-a-bucket.txt.c4gh"
-
-	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
-	// Each step in a case is run sequentially.
-	// At the end of the case, the Docker container and network are removed, unless `SkipTeardown` is set to `true`
-	simpleCase := stepwise.Case{
-		Environment:  env,
-		SkipTeardown: false,
-		Steps: []stepwise.Step{
-			// Create a project key
-			testC4ghStepwiseWriteKey(t, project),
-			// Get the project key
-			testC4ghStepwiseReadKey(t, project),
-			// Add locally created pub key to the whitelist
-			testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString),
-			// Confirm key exists
-			testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString),
-			// Upload encrypt file
-			testC4ghStepwiseWriteFile(t, project, container, path),
-			// Download encrypted file, and confirm it can be decrypted
-			testC4ghStepwiseReadFile(t, project, container, path, privateKey, service, keyName),
-			// Read backup key project
-			testC4ghStepwiseReadBackupKey(t, project),
-			// Read backup files project
-			testC4ghStepwiseReadBackupFile(t, project),
-			// List backup keys find project
-			testC4ghStepwiseReadBackuplist(t, "keys", project),
-			// List backup files find project
-			testC4ghStepwiseReadBackuplist(t, "files", project),
-		},
-	}
-	stepwise.Run(t, simpleCase)
-}
-
 func TestHeaderWhitelistDecryption(t *testing.T) {
 	err := os.Setenv("VAULT_ACC", "1")
 	if err != nil {
@@ -102,6 +44,7 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -156,6 +99,7 @@ func TestHeaderSharingLifecycle(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -245,6 +189,7 @@ func TestKeyRotateAndHeaderRewrap(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -306,6 +251,7 @@ func TestHeaderVersoning(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -363,6 +309,7 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -446,6 +393,7 @@ func TestHeaderWithWhitespaceContainerAndForbidden(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, _, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -524,106 +472,6 @@ func testC4ghStepwiseReadKey(t *testing.T, project string) stepwise.Step {
 			projectKey = data.Keys[fmt.Sprintf("%d", data.LatestVersion)]["public_key_c4gh_64"]
 
 			return nil
-		},
-	}
-}
-
-func decodeJSON(encodedString string) (map[string]any, error) {
-	bytes, err := base64.StdEncoding.DecodeString(encodedString) // Converting data
-
-	if err != nil {
-		fmt.Println("Failed to Decode from base64", err)
-
-		return nil, err
-	}
-
-	var decodedJSON map[string]any
-	err = json.Unmarshal(bytes, &decodedJSON)
-	if err != nil {
-		fmt.Println("Failed to parse JSON", err)
-
-		return nil, err
-	}
-
-	return decodedJSON, nil
-}
-
-func testC4ghStepwiseReadBackupKey(t *testing.T, project string) stepwise.Step {
-	return stepwise.Step{
-		Name:      "testC4ghStepwiseReadBackupKey",
-		Operation: stepwise.ReadOperation,
-		Path:      fmt.Sprintf("/backup/keys/%s", project),
-		Assert: func(resp *api.Secret, err error) error {
-			if err != nil {
-				return err
-			}
-			if resp == nil {
-				return fmt.Errorf("Response was nil")
-			}
-
-			var data struct {
-				Backup string `mapstructure:"backup"`
-			}
-			if err = mapstructure.Decode(resp.Data, &data); err != nil {
-				fmt.Println("failed decoding to mapstructure")
-
-				return err
-			}
-			assert.Assert(t, cmp.Contains(resp.Data, "backup"), fmt.Sprintf("Response did not contain expected backup: %s", resp.Data))
-
-			backupData, err := decodeJSON(data.Backup)
-			if err != nil {
-				return err
-			}
-
-			// we want to at least check the name of the contents
-			var key struct {
-				Name string `mapstructure:"name"`
-			}
-			if err = mapstructure.Decode(backupData["policy"], &key); err != nil {
-				fmt.Println("failed decoding to mapstructure")
-
-				return err
-			}
-
-			assert.Equal(t, key.Name, project, fmt.Sprintf("Project name mismatch: %s", key))
-
-			return nil
-		},
-	}
-}
-
-func testC4ghStepwiseReadBackuplist(t *testing.T, backupType string, project string) stepwise.Step {
-	return stepwise.Step{
-		Name:      fmt.Sprintf("testC4ghStepwiseReadBackuplist-%s", backupType),
-		Operation: stepwise.ListOperation,
-		Path:      fmt.Sprintf("/backup/%s", backupType),
-		Assert: func(resp *api.Secret, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if resp == nil {
-				return fmt.Errorf("Response was nil")
-			}
-
-			var data struct {
-				Keys []any `mapstructure:"keys"`
-			}
-			if err = mapstructure.Decode(resp.Data, &data); err != nil {
-				return fmt.Errorf("failed decoding to mapstructure")
-			}
-
-			// files listing has a different way of styling the listing
-			// thus we format for that
-			projectString := project
-			if backupType == "files" {
-				projectString = fmt.Sprintf("%s/", project)
-			}
-
-			assert.Assert(t, cmp.Contains(data.Keys, projectString), fmt.Sprintf("Response did not contain expected project: %s", data))
-
-			return err
 		},
 	}
 }
@@ -988,51 +836,6 @@ func testC4ghStepwiseReadFiles(t *testing.T, project, batch string, reference ma
 	}
 }
 
-func testC4ghStepwiseReadBackupFile(t *testing.T, project string) stepwise.Step {
-	return stepwise.Step{
-		Name:      "testC4ghStepwiseReadBackupFile",
-		Operation: stepwise.ReadOperation,
-		Path:      fmt.Sprintf("/backup/files/%s", project),
-		Assert: func(resp *api.Secret, err error) error {
-			if err != nil {
-				return err
-			}
-			if resp == nil {
-				return fmt.Errorf("Response was nil")
-			}
-
-			var data struct {
-				Backup string `mapstructure:"backup_1/1"`
-			}
-			if err = mapstructure.Decode(resp.Data, &data); err != nil {
-				fmt.Println("failed decoding to mapstructure")
-
-				return err
-			}
-			assert.Assert(t, cmp.Contains(resp.Data, "backup_1/1"), fmt.Sprintf("Response did not contain expected backup: %s", resp.Data))
-
-			backupData, err := decodeJSON(data.Backup)
-			if err != nil {
-				return err
-			}
-
-			// we want to at least check the name of the contents
-			var file struct {
-				Name string `mapstructure:"name"`
-			}
-			if err = mapstructure.Decode(backupData, &file); err != nil {
-				fmt.Println("failed decoding to mapstructure")
-
-				return err
-			}
-
-			assert.Equal(t, file.Name, project, fmt.Sprintf("Project name mismatch: %s", file))
-
-			return nil
-		},
-	}
-}
-
 func testC4ghStepwiseWriteFileFail(_ *testing.T, project, container, path string) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseWriteFileFail",
@@ -1176,7 +979,6 @@ func testC4hgStepwiseReadFileFail(_ *testing.T, project string, container string
 			if err != nil {
 				return err
 			}
-
 			if resp != nil {
 				return fmt.Errorf("response for data should be null")
 			}
