@@ -20,7 +20,7 @@ import (
 var fileBackups []string
 var whitelistBackup string
 var whitelistBackupPrivateKey [32]byte
-var eventualFileBackupCount = 5
+var eventualFileBackupCount = 6
 
 func TestBackup(t *testing.T) {
 	err := os.Setenv("VAULT_ACC", "1")
@@ -56,14 +56,14 @@ func TestBackup(t *testing.T) {
 	steps = append(steps, testC4ghStepwiseReadKey(t, project))
 	steps = append(steps, testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString))
 	steps = append(steps, testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString))
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 12; i++ {
 		for j := 1; j <= 100; j++ {
 			container := containerPrefix + "-" + strconv.Itoa(i)
 			path := pathPrefix + strconv.Itoa(j) + ".txt.c4gh"
 			steps = append(steps, testC4ghStepwiseWriteFile(t, project, container, path))
 		}
 	}
-	steps = append(steps, testC4ghStepwiseReadBackupFiles(t, project, limit))
+	steps = append(steps, testC4ghStepwiseReadBackupFiles(t, project, limit, false))
 	steps = append(steps, testC4ghStepwiseReadBackupWhitelist(t, project))
 	steps = append(steps, testC4ghStepwiseReadBackupKey(t, project))
 
@@ -103,8 +103,108 @@ func TestRestore(t *testing.T) {
 		steps = append(steps, testC4ghStepwiseWriteRestore(t, "files", projectCopy, fileBackups[i]))
 	}
 	steps = append(steps, testC4ghStepwiseWriteRestore(t, "whitelist", projectCopy, whitelistBackup))
-	for i := 1; i <= 10; i++ {
+	for i := 1; i <= 12; i++ {
 		for j := 1; j <= 100; j++ {
+			container := containerPrefix + "-" + strconv.Itoa(i)
+			path := pathPrefix + strconv.Itoa(j) + ".txt.c4gh"
+			encryptedFiles[projectCopy+"/"+container+"/"+path] = encryptedFiles[project+"/"+container+"/"+path]
+			delete(encryptedFiles, project+"/"+container+"/"+path)
+			steps = append(steps, testC4ghStepwiseReadFile(t, projectCopy, container, path, whitelistBackupPrivateKey, service, keyName))
+		}
+	}
+
+	simpleCase := stepwise.Case{
+		Environment:  env,
+		SkipTeardown: false,
+		Steps:        steps,
+	}
+	stepwise.Run(t, simpleCase)
+}
+
+func TestBackupContainerSplit(t *testing.T) {
+	err := os.Setenv("VAULT_ACC", "1")
+	if err != nil {
+		t.Error("Failed to set VAULT_ACC")
+	}
+	mountOptions := stepwise.MountOptions{
+		MountPathPrefix: "c4ghtransit",
+		RegistryName:    "c4ghtransit",
+		PluginType:      api.PluginTypeSecrets,
+		PluginName:      "c4ghtransit",
+	}
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
+
+	publicKey, privateKey, err := keys.GenerateKeyPair()
+	if err != nil {
+		fmt.Print("Failed to generate crypt4gh key pair")
+		t.Error(err)
+	}
+	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
+	whitelistBackupPrivateKey = privateKey
+
+	project := "my-project"
+	service := "fake-service"
+	keyName := "fake-key-name"
+	containerPrefix := "bucket"
+	pathPrefix := "file"
+	limit := 100000 // a file with one header is bit less that 500 bytes -> one backup will include 0.5 containers
+
+	steps := []stepwise.Step{}
+	steps = append(steps, testC4ghStepwiseWriteKey(t, project))
+	steps = append(steps, testC4ghStepwiseReadKey(t, project))
+	steps = append(steps, testC4ghStepwiseWriteWhitelist(t, project, service, keyName, publicKeyString))
+	steps = append(steps, testC4ghStepwiseReadWhitelist(t, project, service, keyName, publicKeyString))
+	for i := 1; i <= 3; i++ {
+		for j := 1; j <= 300; j++ {
+			container := containerPrefix + "-" + strconv.Itoa(i)
+			path := pathPrefix + strconv.Itoa(j) + ".txt.c4gh"
+			steps = append(steps, testC4ghStepwiseWriteFile(t, project, container, path))
+		}
+	}
+	steps = append(steps, testC4ghStepwiseReadBackupFilesFail(t, project, limit))
+	steps = append(steps, testC4ghStepwiseReadBackupFiles(t, project, limit, true))
+	steps = append(steps, testC4ghStepwiseReadBackupWhitelist(t, project))
+	steps = append(steps, testC4ghStepwiseReadBackupKey(t, project))
+
+	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
+	// Each step in a case is run sequentially.
+	// At the end of the case, the Docker container and network are removed, unless `SkipTeardown` is set to `true`
+	simpleCase := stepwise.Case{
+		Environment:  env,
+		SkipTeardown: false,
+		Steps:        steps,
+	}
+	stepwise.Run(t, simpleCase)
+}
+
+func TestRestoreContainerSplit(t *testing.T) {
+	err := os.Setenv("VAULT_ACC", "1")
+	if err != nil {
+		t.Error("Failed to set VAULT_ACC")
+	}
+	mountOptions := stepwise.MountOptions{
+		MountPathPrefix: "c4ghtransit",
+		RegistryName:    "c4ghtransit",
+		PluginType:      api.PluginTypeSecrets,
+		PluginName:      "c4ghtransit",
+	}
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+
+	project := "my-project"
+	projectCopy := "my-project-copy"
+	service := "fake-service"
+	keyName := "fake-key-name"
+	containerPrefix := "bucket"
+	pathPrefix := "file"
+
+	steps := []stepwise.Step{}
+	for i := range eventualFileBackupCount {
+		steps = append(steps, testC4ghStepwiseWriteRestore(t, "files", projectCopy, fileBackups[i]))
+	}
+	steps = append(steps, testC4ghStepwiseWriteRestore(t, "whitelist", projectCopy, whitelistBackup))
+	for i := 1; i <= 3; i++ {
+		for j := 1; j <= 300; j++ {
 			container := containerPrefix + "-" + strconv.Itoa(i)
 			path := pathPrefix + strconv.Itoa(j) + ".txt.c4gh"
 			encryptedFiles[projectCopy+"/"+container+"/"+path] = encryptedFiles[project+"/"+container+"/"+path]
@@ -176,13 +276,14 @@ func TestBackupList(t *testing.T) {
 	stepwise.Run(t, simpleCase)
 }
 
-func testC4ghStepwiseReadBackupFiles(t *testing.T, project string, limit int) stepwise.Step {
+func testC4ghStepwiseReadBackupFiles(t *testing.T, project string, limit int, force bool) stepwise.Step {
 	return stepwise.Step{
 		Name:      "testC4ghStepwiseReadBackupFiles",
 		Operation: stepwise.ReadOperation,
 		Path:      fmt.Sprintf("/backup/files/%s", project),
 		BodyData: map[string][]string{
 			"limit": {strconv.Itoa(limit)},
+			"force": {strconv.FormatBool(force)},
 		},
 		Assert: func(resp *api.Secret, err error) error {
 			if err != nil {
@@ -330,6 +431,24 @@ func testC4ghStepwiseWriteRestore(_ *testing.T, backupType string, project strin
 			}
 			if resp == nil {
 				return fmt.Errorf("Response was nil")
+			}
+
+			return nil
+		},
+	}
+}
+
+func testC4ghStepwiseReadBackupFilesFail(_ *testing.T, project string, limit int) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseReadBackupFilesFail",
+		Operation: stepwise.ReadOperation,
+		Path:      fmt.Sprintf("/backup/files/%s", project),
+		BodyData: map[string][]string{
+			"limit": {strconv.Itoa(limit)},
+		},
+		Assert: func(_ *api.Secret, err error) error {
+			if err == nil {
+				return fmt.Errorf("function should've failed")
 			}
 
 			return nil

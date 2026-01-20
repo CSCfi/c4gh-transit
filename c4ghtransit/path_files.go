@@ -371,7 +371,7 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	// Results per container are sent to the main goroutine via this channel
+	// Results per container are sent to the following goroutine via this channel
 	respc := make(chan batchResult)
 	wait := make(chan any)
 

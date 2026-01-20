@@ -18,11 +18,6 @@ type backupFileEntry struct {
 	Entry    fileEntryMap `json:"entry"`
 }
 
-type backupFileResult struct {
-	container string
-	entries   string
-}
-
 type transitWhitelistEntrySansProject struct {
 	Key     string `json:"key"`
 	Flavor  string `json:"flavor"`
@@ -45,6 +40,10 @@ func (b *C4ghBackend) pathBackup() *framework.Path {
 			"limit": {
 				Type:        framework.TypeInt,
 				Description: "The maximum size of one backup chunk. Only applicable for files",
+			},
+			"force": {
+				Type:        framework.TypeBool,
+				Description: "Force limit by splitting container data into separate chunks when necessary. Only applicable for files",
 			},
 		},
 
@@ -120,7 +119,8 @@ func (b *C4ghBackend) pathBackupRead(ctx context.Context, req *logical.Request, 
 		backup, err = b.lm.BackupPolicy(ctx, req.Storage, project)
 	case "files":
 		limit := d.Get("limit").(int)
-		backup, err = b.backupFiles(ctx, req.Storage, project, limit)
+		force := d.Get("force").(bool)
+		backup, err = b.backupFiles(ctx, req.Storage, project, limit, force)
 	case "whitelist":
 		backup, err = b.backupWhitelist(ctx, req.Storage, project)
 	default:
@@ -138,7 +138,7 @@ func (b *C4ghBackend) pathBackupRead(ctx context.Context, req *logical.Request, 
 	}, nil
 }
 
-func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, project string, sizeLimit int) ([]string, error) {
+func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, project string, sizeLimit int, forceSplit bool) ([]string, error) {
 	listPath := fmt.Sprintf("files/%s/", project)
 	containers, err := storage.List(ctx, listPath)
 	if err != nil {
@@ -153,56 +153,36 @@ func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, 
 		return nil, err
 	}
 
-	backupBase := `{
-		"backup_time": "` + time.Now().Format(time.RFC3339Nano) + `",
-		"name": "` + project + `",
-		"encryption_key": "` + keyBackup + `",
-		"archived_files": {%s}
-	}`
-
-	backupBaseStr := fmt.Sprintf(backupBase, "")
-	encodedBackupBase, err := jsonutil.EncodeJSON(backupBaseStr)
-	if err != nil {
-		return nil, err
-	}
-
 	batches := []string{}
-	minBatchSize := len(encodedBackupBase)
+	backupBase := `{"backup_time": "` + time.Now().Format(time.RFC3339Nano) + `","name": "` + project + `","encryption_key": "` + keyBackup + `","archived_files": {%s}}`
+	minBatchSize := len(fmt.Sprintf(backupBase, ""))
 
-	ctxCancellable, cancel := context.WithCancelCause(ctx)
-	g, ctxGroup := errgroup.WithContext(ctxCancellable)
+	g, ctxGroup := errgroup.WithContext(ctx)
 
-	defer cancel(nil)
-
-	// Results per container are sent to the following goroutine via this channel
-	respc := make(chan backupFileResult)
+	// Results are sent to the following goroutine via this channel
+	respc := make(chan string)
 	wait := make(chan error)
 
 	go func() {
-		currentSize := minBatchSize
 		fileData := ""
 
 		addToBatches := func() {
-			backupStr := fmt.Sprintf(backupBase, fileData[:max(0, len(fileData)-1)])
+			backupStr := fmt.Sprintf(backupBase, fileData)
 			batches = append(batches, base64.StdEncoding.EncodeToString([]byte(backupStr)))
 
-			currentSize = minBatchSize
 			fileData = ""
 		}
 
 		for next := range respc {
-			nextSize := 4 * ((len(next.entries) + len(next.container) + 4 + 2) / 3)
-			if minBatchSize+nextSize > sizeLimit {
-				cancel(fmt.Errorf("container %s is too large (~%d bytes)", next.container, nextSize))
-
-				break
-			}
-			if currentSize+nextSize > sizeLimit {
+			switch {
+			case len(fileData) == 0:
+				fileData = next
+			case 4*((minBatchSize+len(fileData)+len(next)+1+2)/3) > sizeLimit:
 				addToBatches()
+				fileData = next
+			default:
+				fileData += "," + next
 			}
-
-			fileData += fmt.Sprintf("\"%s\":%s,", next.container, next.entries)
-			currentSize += nextSize
 		}
 
 		addToBatches()
@@ -238,18 +218,7 @@ func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, 
 				}
 			}
 
-			encodedEntries, err := jsonutil.EncodeJSON(entries)
-			if err != nil {
-				return err
-			}
-
-			select {
-			case respc <- backupFileResult{container: container, entries: string(encodedEntries)}:
-			case <-ctxGroup.Done():
-				return context.Cause(ctxGroup)
-			}
-
-			return nil
+			return b.sendContainer(ctxGroup, container, entries, respc, sizeLimit-minBatchSize, forceSplit)
 		})
 	}
 
@@ -260,6 +229,45 @@ func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, 
 	<-wait
 
 	return batches, nil
+}
+
+func (b *C4ghBackend) sendContainer(
+	ctx context.Context,
+	container string,
+	files []backupFileEntry,
+	ch chan<- string,
+	maxLen int,
+	splitContainer bool,
+) error {
+	encodedFiles, err := jsonutil.EncodeJSON(files)
+	if err != nil {
+		return err
+	}
+
+	size := 4 * ((len(encodedFiles) + len(container) + 3 + 2) / 3) // Calculate size for base64 data (no trailing comma)
+	if size > maxLen {
+		if !splitContainer {
+			return fmt.Errorf("container %s is too large (~%d bytes)", container, size)
+		}
+		if len(files) == 1 {
+			return fmt.Errorf("file %s in container %s is too large (~%d bytes)", files[0].Filename, container, size)
+		}
+
+		err = b.sendContainer(ctx, container, files[:len(files)/2], ch, maxLen, splitContainer)
+		if err != nil {
+			return err
+		}
+
+		return b.sendContainer(ctx, container, files[len(files)/2:], ch, maxLen, splitContainer)
+	}
+
+	select {
+	case ch <- fmt.Sprintf("\"%s\":%s", container, string(encodedFiles)):
+	case <-ctx.Done():
+		return context.Cause(ctx)
+	}
+
+	return nil
 }
 
 func (b *C4ghBackend) backupWhitelist(ctx context.Context, storage logical.Storage, project string) (string, error) {
