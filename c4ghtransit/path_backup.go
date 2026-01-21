@@ -32,18 +32,22 @@ func (b *C4ghBackend) pathBackup() *framework.Path {
 			"project": {
 				Type:        framework.TypeString,
 				Description: "The project the key or file belongs to",
+				Required:    true,
 			},
 			"type": {
 				Type:        framework.TypeString,
 				Description: "'keys', 'files', or 'whitelist' if user wishes to backup a key, a file or a whitelisted key",
+				Required:    true,
 			},
 			"limit": {
 				Type:        framework.TypeInt,
 				Description: "The maximum size of one backup chunk. Only applicable for files",
+				Required:    true,
 			},
 			"force": {
 				Type:        framework.TypeBool,
 				Description: "Force limit by splitting container data into separate chunks when necessary. Only applicable for files",
+				Default:     false,
 			},
 		},
 

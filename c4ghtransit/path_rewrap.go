@@ -23,6 +23,7 @@ func (b *C4ghBackend) pathRewrap() *framework.Path {
 			"project": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "The project a key belongs to",
+				Required:    true,
 			},
 		},
 

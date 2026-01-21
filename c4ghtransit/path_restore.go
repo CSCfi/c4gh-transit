@@ -35,14 +35,17 @@ func (b *C4ghBackend) pathRestore() *framework.Path {
 			"backup": {
 				Type:        framework.TypeString,
 				Description: "Backed up data to be restored. This should be the output from the 'backup/' endpoint.",
+				Required:    true,
 			},
 			"project": {
 				Type:        framework.TypeString,
 				Description: "If set, this will be the name of the project of the restored key/file.",
+				Required:    true,
 			},
 			"type": {
 				Type:        framework.TypeString,
 				Description: "'keys', 'files', or 'whitelist' if user wishes to restore a key, a file or a whitelisted key",
+				Required:    true,
 			},
 			"force": {
 				Type:        framework.TypeBool,
