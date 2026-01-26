@@ -30,13 +30,13 @@ go build -v -o vault/plugins/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
 With the golang debian docker image
-```
+```bash
 docker run --rm \
     -u $(id -u):$(id -g) \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    golang:bullseye \
+    golang:1.25-trixie \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
@@ -47,13 +47,13 @@ With local environment, so the binary will be statically linked, and will use a 
     CGO_ENABLED=0 go build -tags netgo -a -v -o output/c4ghtransit-alpine c4ghtransit/cmd/c4ghtransit/main.go
 
 With the golang docker alpine image
-```
+```bash
 docker run --rm \
     -u $(id -u):$(id -g) \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    golang:1.21-alpine \
+    golang:1.25-alpine \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
@@ -70,7 +70,7 @@ Then run the script provided to start a vault server with the plugin enabled and
 
 The commands below assume that the plugin binary exists at `./vault/plugins/c4ghtransit`
 
-```
+```bash
 docker run --rm \
     --name=dev-vault \
     -e 'VAULT_DEV_ROOT_TOKEN_ID=devroot' \

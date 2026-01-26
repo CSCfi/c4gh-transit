@@ -32,3 +32,5 @@ go.work
 vault/*
 
 openapi.json
+
+.DS_Store

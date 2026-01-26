@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"iter"
+	"maps"
 	"net/http"
 	"strconv"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/neicnordic/crypt4gh/keys"
 	"github.com/neicnordic/crypt4gh/model/headers"
 	"golang.org/x/crypto/chacha20poly1305"
+	"golang.org/x/sync/errgroup"
 )
 
 type reencryptFileEntry struct {
@@ -28,6 +31,12 @@ type reencryptFileEntry struct {
 type fileEntryMap struct {
 	Headers       map[string]reencryptFileEntry `json:"headers" structs:"headers" mapstructure:"headers"`
 	LatestVersion int                           `json:"latest_version" structs:"latest_version" mapstructure:"latest_version"`
+}
+
+type batchResult struct {
+	container string
+	responses map[string]any
+	missing   iter.Seq[string]
 }
 
 // pathFiles provides c4ghtransit/files endpoint for storing headers encrypted with keys stored in vault
@@ -356,57 +365,84 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 		return nil, err
 	}
 
+	// Final response
 	resp := &logical.Response{}
-	resp.Data = make(map[string]interface{})
+	resp.Data = make(map[string]any)
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	// Results per container are sent to the following goroutine via this channel
+	respc := make(chan batchResult)
+	wait := make(chan any)
+
+	go func() {
+		for next := range respc {
+			resp.Data[next.container] = next.responses
+
+			for missing := range next.missing {
+				resp.AddWarning(fmt.Sprintf("No matches found for %s in container %s", missing, next.container))
+			}
+		}
+
+		wait <- nil
+	}()
+
 	for container := range batchJSON {
-		listPath := fmt.Sprintf("files/%s/%s/", project, container)
-		entries, err := req.Storage.List(ctx, listPath)
-		if err != nil {
-			return nil, err
-		}
-
-		found := make(map[string]bool)
-		for _, pattern := range batchJSON[container] {
-			found[pattern] = false
-		}
-
-		resps := map[string]interface{}{}
-		for _, entry := range entries {
-			decodedEntry, err := base64.StdEncoding.DecodeString(entry)
+		g.Go(func() error {
+			notFound := make(map[string]bool)
+			listPath := fmt.Sprintf("files/%s/%s/", project, container)
+			entries, err := req.Storage.List(ctx, listPath)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			for _, pattern := range batchJSON[container] {
-				match, err := doublestar.Match(pattern, string(decodedEntry))
+
+			resps := map[string]any{}
+			for _, entry := range entries {
+				decodedEntry, err := base64.StdEncoding.DecodeString(entry)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				if match {
-					found[pattern] = true
-					nextResp, err := b.readFile(ctx, req, project, container, entry, service, keyName, project)
+				for _, pattern := range batchJSON[container] {
+					notFound[pattern] = true
+					match, err := doublestar.Match(pattern, string(decodedEntry))
 					if err != nil {
-						return nil, err
+						return err
 					}
-					if nextResp.IsError() {
-						return nextResp, nil
-					}
-					if nextResp != nil {
-						resps[string(decodedEntry)] = nextResp.Data
-					}
+					if match {
+						delete(notFound, pattern)
+						nextResp, err := b.readFile(ctx, req, project, container, entry, service, keyName, project)
+						if err != nil {
+							return err
+						}
+						if nextResp == nil {
+							return fmt.Errorf("failed to read %s with service %s and key %s: %w", listPath, service, keyName, err)
+						}
+						if nextResp.IsError() {
+							return nextResp.Error()
+						}
 
-					break
+						resps[string(decodedEntry)] = nextResp.Data
+
+						break
+					}
 				}
 			}
-		}
 
-		for f := range found {
-			if !found[f] {
-				resp.AddWarning(fmt.Sprintf("No matches found for %s in container %s", f, container))
+			select {
+			case respc <- batchResult{container: container, responses: resps, missing: maps.Keys(notFound)}:
+			case <-ctx.Done():
+				return ctx.Err()
 			}
-		}
 
-		resp.Data[container] = resps
+			return nil
+		})
 	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	close(respc)
+	<-wait
 
 	return resp, nil
 }
@@ -506,7 +542,7 @@ func (b *C4ghBackend) readFile(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"headers":        result.Headers,
 			"latest_version": result.LatestVersion,
 		},

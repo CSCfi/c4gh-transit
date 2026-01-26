@@ -180,7 +180,7 @@ func (b *C4ghBackend) pathWhitelistRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"key":     result.Key,
 			"flavor":  result.Flavor,
 			"service": result.Service,
@@ -245,7 +245,7 @@ func (b *C4ghBackend) pathWhitelistWrite(
 
 	keyPath := fmt.Sprintf("whitelist/%s/%s/%s", project, service, name)
 
-	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
+	entry, err := logical.StorageEntryJSON(keyPath, map[string]any{
 		"key":     formattedKey,
 		"flavor":  "crypt4gh",
 		"project": project,

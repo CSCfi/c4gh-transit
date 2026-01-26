@@ -25,6 +25,7 @@ func TestKeyRotateMultipleTimes(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
@@ -78,6 +79,7 @@ func TestKeyRotateMultipleTimesAndRewrap(t *testing.T) {
 		PluginName:      "c4ghtransit",
 	}
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {

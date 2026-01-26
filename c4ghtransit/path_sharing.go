@@ -260,7 +260,7 @@ func (b *C4ghBackend) pathSharingRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"id":         result.ID,
 			"idkeystone": result.IDKeystone,
 		},
@@ -289,7 +289,7 @@ func (b *C4ghBackend) pathSharingWrite(
 
 	keyPath := fmt.Sprintf("sharing/%s/%s/%s", project, container, id)
 
-	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
+	entry, err := logical.StorageEntryJSON(keyPath, map[string]any{
 		"id":         id,
 		"idkeystone": idkeystone,
 	})
@@ -350,7 +350,7 @@ func (b *C4ghBackend) pathFileSharingRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"id":         result.ID,
 			"idkeystone": result.IDKeystone,
 		},
@@ -373,7 +373,7 @@ func (b *C4ghBackend) pathFileSharingWrite(
 
 	keyPath := fmt.Sprintf("sharing/%s/%s/%s/%s", project, container, file, id)
 
-	entry, err := logical.StorageEntryJSON(keyPath, map[string]interface{}{
+	entry, err := logical.StorageEntryJSON(keyPath, map[string]any{
 		"id":         id,
 		"idkeystone": idkeystone,
 	})
