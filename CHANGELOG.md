@@ -9,7 +9,14 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ### Changed
 
+- split backup into multiple chunks if its size exceeds a certain value
+- use goroutines when fetching headers in a batch
 - update CI to use golangci-lint v2 (#20)
+
+### Added
+
+- option `force` for backup to indicate whether containers are allowed to be split into multiple chunks. Without `force`, containers that do not fit into one chunk will cause an error.
+- option `limit` for backup to indicate the maximum size of a backup chunk
 
 ## [2025.2.0] - 2025-02-19
 
