@@ -6,7 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
+	"math/rand/v2"
 	"os"
+	"reflect"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -239,7 +243,7 @@ func TestKeyRotateAndHeaderRewrap(t *testing.T) {
 	stepwise.Run(t, simpleCase)
 }
 
-func TestHeaderVersoning(t *testing.T) {
+func TestHeaderVersioning(t *testing.T) {
 	err := os.Setenv("VAULT_ACC", "1")
 	if err != nil {
 		t.Error("Failed to set VAULT_ACC")
@@ -336,9 +340,8 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 	batch[container3] = []string{"**"}
 	b, err := json.Marshal(batch)
 	if err != nil {
-		fmt.Println(err)
-
-		return
+		fmt.Println("failed to marshal batch")
+		t.Error(err)
 	}
 
 	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
@@ -428,6 +431,64 @@ func TestHeaderWithWhitespaceContainerAndForbidden(t *testing.T) {
 		},
 	}
 	stepwise.Run(t, weirdNameCase)
+}
+
+func TestHeaderVersionBatch(t *testing.T) {
+	err := os.Setenv("VAULT_ACC", "1")
+	if err != nil {
+		t.Error("Failed to set VAULT_ACC")
+	}
+	mountOptions := stepwise.MountOptions{
+		MountPathPrefix: "c4ghtransit",
+		RegistryName:    "c4ghtransit",
+		PluginType:      api.PluginTypeSecrets,
+		PluginName:      "c4ghtransit",
+	}
+	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	encryptedFiles = make(map[string][]byte)
+
+	project := "my-project"
+	containerPrefix := "bucket"
+	pathPrefix := "file"
+
+	expectedResponse := make(map[string]map[string]int)
+	batch := make(map[string][]string)
+
+	steps := []stepwise.Step{}
+	steps = append(steps, testC4ghStepwiseWriteKey(t, project))
+	steps = append(steps, testC4ghStepwiseReadKey(t, project))
+	for i := 1; i <= 5; i++ {
+		container := containerPrefix + "-" + strconv.Itoa(i)
+		expectedResponse[container] = make(map[string]int)
+		batch[container] = []string{"**"}
+
+		for j := 1; j <= 10; j++ {
+			path := pathPrefix + strconv.Itoa(j) + ".txt.c4gh"
+
+			headerCount := rand.IntN(10) + 1 // #nosec G404
+			expectedResponse[container][path] = headerCount
+			for range headerCount {
+				steps = append(steps, testC4ghStepwiseWriteFile(t, project, container, path))
+			}
+		}
+	}
+
+	b, err := json.Marshal(batch)
+	if err != nil {
+		fmt.Println("failed to marshal batch")
+		t.Error(err)
+	}
+	steps = append(steps, testC4ghStepwiseReadHeaderVersions(t, project, base64.StdEncoding.EncodeToString(b), expectedResponse))
+
+	// Running the case compiles the plugin with Docker, and runs Vault with the plugin enabled.
+	// Each step in a case is run sequentially.
+	// At the end of the case, the Docker container and network are removed, unless `SkipTeardown` is set to `true`
+	simpleCase := stepwise.Case{
+		Environment:  env,
+		SkipTeardown: false,
+		Steps:        steps,
+	}
+	stepwise.Run(t, simpleCase)
 }
 
 func testC4ghStepwiseWriteKey(_ *testing.T, project string) stepwise.Step {
@@ -980,7 +1041,7 @@ func testC4hgStepwiseReadFileFail(_ *testing.T, project string, container string
 				return err
 			}
 			if resp != nil {
-				return fmt.Errorf("response for data should be null")
+				return fmt.Errorf("response for data should be null, received %+v", resp)
 			}
 
 			return nil
@@ -1014,6 +1075,51 @@ func testC4hgStepwiseReadWhitelistFileFail(_ *testing.T, project string, contain
 			}
 			if resp != nil {
 				return fmt.Errorf("response for data should be null")
+			}
+
+			return nil
+		},
+	}
+}
+
+func testC4ghStepwiseReadHeaderVersions(t *testing.T, project string, batch string, expectedResp map[string]map[string]int) stepwise.Step {
+	return stepwise.Step{
+		Name:      "testC4ghStepwiseReadHeaderVersions",
+		Operation: stepwise.UpdateOperation,
+		Path:      fmt.Sprintf("/files/%s/", project),
+		Data:      map[string]any{"batch": batch, "versions": true},
+		Assert: func(resp *api.Secret, err error) error {
+			if err != nil {
+				return err
+			}
+			if resp == nil {
+				return fmt.Errorf("Response was nil")
+			}
+
+			expectedContainers := slices.Sorted(maps.Keys(expectedResp))
+			receivedContainers := slices.Sorted(maps.Keys(resp.Data))
+			assert.Assert(t, reflect.DeepEqual(expectedContainers, receivedContainers), "Containers do not match")
+
+			for _, c := range receivedContainers {
+				data, ok := resp.Data[c].(map[string]any)
+				if !ok {
+					return fmt.Errorf("Container %s has invalid type", c)
+				}
+
+				expectedFiles := slices.Sorted(maps.Keys(expectedResp[c]))
+				receivedFiles := slices.Sorted(maps.Keys(data))
+				assert.Assert(t, reflect.DeepEqual(expectedFiles, receivedFiles), fmt.Sprintf("Files do not match at container %s", c))
+
+				for _, f := range receivedFiles {
+					versionData, ok := data[f].(json.Number)
+					if !ok {
+						return fmt.Errorf("Value for container %s and file %s has invalid type", c, f)
+					}
+
+					receivedVersion, _ := versionData.Int64()
+					assert.Equal(t, int(receivedVersion), expectedResp[c][f],
+						fmt.Sprintf("Header version mismatch at container %s and file %s (%d vs %d)", c, f, receivedVersion, expectedResp[c][f]))
+				}
 			}
 
 			return nil

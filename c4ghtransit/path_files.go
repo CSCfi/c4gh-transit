@@ -190,7 +190,6 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 			"service": {
 				Type:        framework.TypeNameString,
 				Description: "Service that requests the file, matches the whitelist service name. Must be in the request body for update operations.",
-				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:        "Service",
 					Description: "Used in the batch request",
@@ -200,18 +199,22 @@ func (b *C4ghBackend) pathContainers() *framework.Path {
 			"key": {
 				Type:        framework.TypeNameString,
 				Description: "Name of the whitelisted key the service wants to use. Must be in the request body for update operations.",
-				Required:    true,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:        "Key",
 					Description: "Used in the batch request",
 					Value:       "key-name",
 				},
 			},
+			"versions": {
+				Type:        framework.TypeBool,
+				Description: "Return the latest versions of headers instead of re-encrypting them",
+				Default:     false,
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:    b.pathFilesBatchWrite,
-				Summary:     "Batch re-encrypt headers",
+				Summary:     "Batch re-encrypt headers or get their latest versions",
 				Description: pathContainersUpdateOperationDescription,
 			},
 			logical.ListOperation: &framework.PathOperation{
@@ -354,6 +357,7 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 	service := d.Get("service").(string)
 	keyName := d.Get("key").(string)
 	batch := d.Get("batch").(string)
+	versions := d.Get("versions").(bool)
 	batch64, err := base64.StdEncoding.DecodeString(batch)
 	if err != nil {
 		return nil, err
@@ -395,6 +399,9 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 			if err != nil {
 				return err
 			}
+			for _, pattern := range batchJSON[container] {
+				notFound[pattern] = true
+			}
 
 			resps := map[string]any{}
 			for _, entry := range entries {
@@ -403,19 +410,32 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 					return err
 				}
 				for _, pattern := range batchJSON[container] {
-					notFound[pattern] = true
 					match, err := doublestar.Match(pattern, string(decodedEntry))
 					if err != nil {
 						return err
 					}
+
+					if match && versions {
+						delete(notFound, pattern)
+
+						var result fileEntryMap
+						if err := b.decodeFile(ctx, req, project, container, entry, &result); err != nil {
+							return err
+						}
+						resps[string(decodedEntry)] = result.LatestVersion
+
+						break
+					}
+
 					if match {
 						delete(notFound, pattern)
+
 						nextResp, err := b.readFile(ctx, req, project, container, entry, service, keyName, project)
 						if err != nil {
 							return err
 						}
 						if nextResp == nil {
-							return fmt.Errorf("failed to read %s with service %s and key %s: %w", listPath, service, keyName, err)
+							return fmt.Errorf("failed to read %s with service %s and key %s", listPath, service, keyName)
 						}
 						if nextResp.IsError() {
 							return nextResp.Error()
@@ -447,24 +467,36 @@ func (b *C4ghBackend) pathFilesBatchWrite(
 	return resp, nil
 }
 
+func (b *C4ghBackend) decodeFile(
+	ctx context.Context,
+	req *logical.Request,
+	project, container, file string,
+	result *fileEntryMap,
+) error {
+	filePath := fmt.Sprintf("files/%s/%s/%s", project, container, file)
+	entry, err := req.Storage.Get(ctx, filePath)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return nil
+	}
+
+	return entry.DecodeJSON(&result)
+}
+
 func (b *C4ghBackend) readFile(
 	ctx context.Context,
 	req *logical.Request,
 	owner, container, file, service, keyName, project string,
 ) (*logical.Response, error) {
 	// Open old headers
-	filePath := fmt.Sprintf("files/%s/%s/%s", owner, container, file)
-	entry, err := req.Storage.Get(ctx, filePath)
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
 	var result fileEntryMap
-	if err := entry.DecodeJSON(&result); err != nil {
+	if err := b.decodeFile(ctx, req, owner, container, file, &result); err != nil {
 		return nil, err
+	}
+	if result.LatestVersion == 0 { // No file found
+		return nil, nil
 	}
 
 	// Get the policy
@@ -722,7 +754,8 @@ to this transit service. These headers can then be downloaded re-encrypted
 with a whitelisted key, or deleted permanently using this path.
 `
 	pathContainersHelpSynopsis = `
-Re-encrypts multiple headers at the same time, and lists the containers / buckets into which headers have been uploaded
+Re-encrypts multiple headers at the same time, returns the latest version
+number of each file header, or lists which containers / buckets contain uploaded headers
 `
 	pathContainersHelpDescription = `
 This path allows you to download re-encrypted headers in batches. Listing order of buckets is not specified.

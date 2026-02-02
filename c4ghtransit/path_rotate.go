@@ -15,6 +15,7 @@ func (b *C4ghBackend) pathRotate() *framework.Path {
 			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the key",
+				Required:    true,
 			},
 		},
 
