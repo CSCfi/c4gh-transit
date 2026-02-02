@@ -7,6 +7,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ## [Unreleased]
 
+## [2026.2.0] - 2026-02-02
+
 ### Changed
 
 - split backup into multiple chunks if its size exceeds a certain value
@@ -15,6 +17,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ### Added
 
+- modify batch header endpoint to be able to return latest header versions instead of re-encrypting them
 - option `force` for backup to indicate whether containers are allowed to be split into multiple chunks. Without `force`, containers that do not fit into one chunk will cause an error.
 - option `limit` for backup to indicate the maximum size of a backup chunk
 
@@ -347,7 +350,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 - fix some linting mises
 - fix incorrect key usage in file ingestion and export
 
-[Unreleased]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2025.2.0...HEAD
+[Unreleased]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2026.2.0...HEAD
+[2026.2.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2025.2.0...2026.2.0
 [2025.2.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.2...2025.2.0
 [2024.02.2]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.1...2024.02.2
 [2024.02.1]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.0...2024.02.1
