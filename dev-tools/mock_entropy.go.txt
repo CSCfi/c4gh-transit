@@ -1,0 +1,18 @@
+package c4ghtransit
+
+import (
+	"io"
+
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+)
+
+type StaticReader struct {
+}
+
+func (s StaticReader) GetRandom(bytes int) ([]byte, error) {
+	return make([]byte, bytes), nil
+}
+
+func (b *C4ghBackend) GetRandomReader() io.Reader {
+	return entropy.NewReader(StaticReader{})
+}
