@@ -7,6 +7,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- push to Artifactory a `c4ghtransit-fixed` binary when CI runs in default branch. It's project keys are fixed to a certain value.
+
 ## [2026.2.0] - 2026-02-02
 
 ### Changed
