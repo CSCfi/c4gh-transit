@@ -100,22 +100,22 @@ build-binary:
   script:
     - CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
     # Scan binary
-    - jf s --licenses output/c4ghtransit --repo ${ARTIFACTORY_SERVER_BINARY_REPO}
+    - jf s --licenses output/c4ghtransit --repo ${ARTIFACTORY_BINARY_REPO}
     - >
       if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
         echo Pushing latest plugin build
-        jf rt u output/c4ghtransit "$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
+        jf rt u output/c4ghtransit "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
 
         cp dev-tools/mock_entropy.go.txt c4ghtransit/mock_entropy.go
 
         CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit-fixed c4ghtransit/cmd/c4ghtransit/main.go
-        jf s --licenses output/c4ghtransit-fixed --repo ${ARTIFACTORY_SERVER_BINARY_REPO}
+        jf s --licenses output/c4ghtransit-fixed --repo ${ARTIFACTORY_BINARY_REPO}
 
         echo Pushing latest plugin build with fixed public keys
-        jf rt u output/c4ghtransit-fixed "$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-fixed"
+        jf rt u output/c4ghtransit-fixed "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-fixed"
       else
         echo Pushing "${CI_COMMIT_TAG}" plugin build
-        jf rt u output/c4ghtransit $ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
+        jf rt u output/c4ghtransit $ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
       fi
   after_script:
     - echo "BINARY_JOB_ID=$CI_JOB_ID" >> binary_job_id.env
@@ -180,7 +180,7 @@ release:
     assets:
       links:
         - name: c4ghtransit-${RELEASE_VERSION} (artifactory)
-          url: https://$ARTIFACTORY_SERVER/artifactory/$ARTIFACTORY_SERVER_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${RELEASE_VERSION}
+          url: $ARTIFACTORY_URL/artifactory/$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${RELEASE_VERSION}
         - name: c4ghtransit-${RELEASE_VERSION} (gitlab)
           url: $CI_PROJECT_URL/-/jobs/$BINARY_JOB_ID/artifacts/raw/dev-tools/openapi.json
         - name: c4ghtransit-${RELEASE_VERSION}-openapi-schema.json
