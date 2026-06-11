@@ -82,7 +82,9 @@ func (b *C4ghBackend) pathRestoreUpdate(ctx context.Context, req *logical.Reques
 
 	switch contentType {
 	case "keys":
-		return nil, b.lm.RestorePolicy(ctx, req.Storage, project, backupB64, force)
+		_, err := b.lm.RestorePolicy(ctx, req.Storage, project, backupB64, force)
+
+		return nil, err
 	case "files":
 		return b.restoreFile(ctx, req.Storage, project, backupB64, force)
 	case "whitelist":
@@ -135,7 +137,7 @@ func (b *C4ghBackend) restoreFile(ctx context.Context, storage logical.Storage, 
 	}
 
 	if !skipKey {
-		if err = b.lm.RestorePolicy(ctx, storage, project, fileData.Key, force); err != nil {
+		if _, err = b.lm.RestorePolicy(ctx, storage, project, fileData.Key, force); err != nil {
 			return nil, fmt.Errorf("could not restore encryption key: %w", err)
 		}
 	}
