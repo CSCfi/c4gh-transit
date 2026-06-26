@@ -4,12 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"testing"
 
 	stepwise "github.com/CSCfi/vault-testing-stepwise"
-	"github.com/CSCfi/vault-testing-stepwise/environments/docker"
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/mapstructure"
 	"github.com/neicnordic/crypt4gh/keys"
@@ -23,23 +21,12 @@ var whitelistBackupPrivateKey [32]byte
 var eventualFileBackupCount = 6
 
 func TestBackup(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 	whitelistBackupPrivateKey = privateKey
@@ -79,17 +66,7 @@ func TestBackup(t *testing.T) {
 }
 
 func TestRestore(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 
 	project := "my-project"
 	projectCopy := "my-project-copy"
@@ -122,23 +99,11 @@ func TestRestore(t *testing.T) {
 }
 
 func TestBackupContainerSplit(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
-	encryptedFiles = make(map[string][]byte)
+	env := setup(t)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 	whitelistBackupPrivateKey = privateKey
@@ -179,17 +144,7 @@ func TestBackupContainerSplit(t *testing.T) {
 }
 
 func TestRestoreContainerSplit(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 
 	project := "my-project"
 	projectCopy := "my-project-copy"
@@ -222,23 +177,12 @@ func TestRestoreContainerSplit(t *testing.T) {
 }
 
 func TestBackupList(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
