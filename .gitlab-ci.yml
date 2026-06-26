@@ -80,8 +80,10 @@ test:
   tags:
     - sds
   script:
-    - GO_BIN=$(which go)
-    - sudo ${GO_BIN} test -timeout 40m -v ./c4ghtransit
+    - export ARTIFACTORY_USER=$ARTIFACTORY_USER
+    - export ARTIFACTORY_USER_PASSWORD=$ARTIFACTORY_USER_PASSWORD
+    - export ARTIFACTORY_SERVER=$ARTIFACTORY_SERVER
+    - go test -timeout 40m -v ./c4ghtransit
 
 build-binary:
   stage: build
