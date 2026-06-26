@@ -98,6 +98,7 @@ build-binary:
     # Configure JFrog Artifactory repositories
     - jf config import "${JF_CONFIG}"
   script:
+    # GOARCH is defined explicitly so that it works in arm64 as well
     - CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
     # Scan binary
     - jf s --licenses output/c4ghtransit --repo ${ARTIFACTORY_BINARY_REPO}
@@ -107,6 +108,7 @@ build-binary:
         jf rt u output/c4ghtransit "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
 
         cp dev-tools/mock_entropy.go.txt c4ghtransit/mock_entropy.go
+        go mod tidy
 
         CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit-fixed c4ghtransit/cmd/c4ghtransit/main.go
         jf s --licenses output/c4ghtransit-fixed --repo ${ARTIFACTORY_BINARY_REPO}
