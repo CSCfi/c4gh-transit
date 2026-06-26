@@ -2,35 +2,20 @@ package c4ghtransit
 
 import (
 	"encoding/base64"
-	"fmt"
-	"os"
 	"strconv"
 	"testing"
 
 	stepwise "github.com/CSCfi/vault-testing-stepwise"
-	"github.com/CSCfi/vault-testing-stepwise/environments/docker"
-	"github.com/hashicorp/vault/api"
 	"github.com/neicnordic/crypt4gh/keys"
 )
 
 func TestKeyRotateMultipleTimes(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
@@ -68,23 +53,12 @@ func TestKeyRotateMultipleTimes(t *testing.T) {
 }
 
 func TestKeyRotateMultipleTimesAndRewrap(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 

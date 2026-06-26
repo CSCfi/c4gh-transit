@@ -36,7 +36,7 @@ docker run --rm \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    golang:1.25-trixie \
+    sds-docker.artifactory.ci.csc.fi/golang:1.26.4-trixie \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
@@ -53,7 +53,7 @@ docker run --rm \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    golang:1.25-alpine \
+    sds-docker.artifactory.ci.csc.fi/golang:1.26.4-alpine \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
@@ -76,7 +76,7 @@ docker run --rm \
     -e 'VAULT_DEV_ROOT_TOKEN_ID=devroot' \
     -e 'VAULT_LOCAL_CONFIG={"storage": {"file": {"path": "/vault/data"}}, "disable_mlock": true, "ui": true}' -p 8200:8200 \
     -v ${PWD}/vault/plugins:/vault/plugins \
-    hashicorp/vault:latest \
+    sds-docker.artifactory.ci.csc.fi/hashicorp/vault:1.21.4 \
     server -dev -dev-plugin-dir=/vault/plugins
 ```
 

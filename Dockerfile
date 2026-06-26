@@ -1,4 +1,4 @@
-FROM golang:1.25 as PLUGIN
+FROM sds-docker.artifactory.ci.csc.fi/golang:1.25.7 AS plugin
 
 WORKDIR /usr/src
 
@@ -12,7 +12,7 @@ RUN apt-get -y update && \
 COPY . .
 RUN go build -ldflags=-w -v -o /usr/local/bin/c4ghtransit ./c4ghtransit/cmd/c4ghtransit/main.go
 
-FROM golang:1.25
+FROM sds-docker.artifactory.ci.csc.fi/golang:1.25.7
 
 RUN apt-get -y update && \
     apt-get -y upgrade && \
@@ -28,7 +28,7 @@ RUN mkdir -p $GOPATH/src/github.com/hashicorp && cd $_ && \
 WORKDIR /vault
 
 COPY config.json /vault/config/config.json
-COPY --from=PLUGIN /usr/local/bin/c4ghtransit /vault/plugins/c4ghtransit
+COPY --from=plugin /usr/local/bin/c4ghtransit /vault/plugins/c4ghtransit
 
 ENTRYPOINT [ "vault" ]
 

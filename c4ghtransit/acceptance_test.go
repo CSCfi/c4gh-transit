@@ -27,7 +27,7 @@ import (
 	stepwise "github.com/CSCfi/vault-testing-stepwise"
 )
 
-const vaultImage = "hashicorp/vault:latest"
+const vaultImage = "sds-docker.artifactory.ci.csc.fi/hashicorp/vault:1.21.4"
 
 var (
 	oldKey         string
@@ -36,7 +36,7 @@ var (
 	content        = "Hide your secrets in a bucket."
 )
 
-func TestHeaderWhitelistDecryption(t *testing.T) {
+func setup(t *testing.T) *docker.Cluster {
 	err := os.Setenv("VAULT_ACC", "1")
 	if err != nil {
 		t.Error("Failed to set VAULT_ACC")
@@ -47,13 +47,26 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 		PluginType:      api.PluginTypeSecrets,
 		PluginName:      "c4ghtransit",
 	}
+
+	username := os.Getenv("ARTIFACTORY_USER")
+	password := os.Getenv("ARTIFACTORY_USER_PASSWORD")
+	serverAddress := os.Getenv("ARTIFACTORY_SERVER")
+
 	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	if err = env.SetRegistryAuth(username, password, serverAddress); err != nil {
+		t.Fatal(err)
+	}
+
+	return env
+}
+
+func TestHeaderWhitelistDecryption(t *testing.T) {
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
@@ -92,30 +105,18 @@ func TestHeaderWhitelistDecryption(t *testing.T) {
 }
 
 func TestHeaderSharingLifecycle(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
 	otherPublicKey, otherPrivateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate the other crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate the other crypt4gh key pair %v", err)
 	}
 	otherPublicKeyString := base64.StdEncoding.EncodeToString(otherPublicKey[:])
 
@@ -182,23 +183,12 @@ func TestHeaderSharingLifecycle(t *testing.T) {
 }
 
 func TestKeyRotateAndHeaderRewrap(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
@@ -244,23 +234,12 @@ func TestKeyRotateAndHeaderRewrap(t *testing.T) {
 }
 
 func TestHeaderVersioning(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
@@ -302,23 +281,12 @@ func TestHeaderVersioning(t *testing.T) {
 }
 
 func TestReadMultipleFileHeaders(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
@@ -385,23 +353,12 @@ func TestReadMultipleFileHeaders(t *testing.T) {
 }
 
 func TestHeaderWithWhitespaceContainerAndForbidden(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	publicKey, _, err := keys.GenerateKeyPair()
 	if err != nil {
-		fmt.Print("Failed to generate crypt4gh key pair")
-		t.Error(err)
+		t.Fatalf("Failed to generate crypt4gh key pair %v", err)
 	}
 	publicKeyString := base64.StdEncoding.EncodeToString(publicKey[:])
 
@@ -434,17 +391,7 @@ func TestHeaderWithWhitespaceContainerAndForbidden(t *testing.T) {
 }
 
 func TestHeaderVersionBatch(t *testing.T) {
-	err := os.Setenv("VAULT_ACC", "1")
-	if err != nil {
-		t.Error("Failed to set VAULT_ACC")
-	}
-	mountOptions := stepwise.MountOptions{
-		MountPathPrefix: "c4ghtransit",
-		RegistryName:    "c4ghtransit",
-		PluginType:      api.PluginTypeSecrets,
-		PluginName:      "c4ghtransit",
-	}
-	env := docker.NewEnvironment("C4ghTransit", &mountOptions, vaultImage)
+	env := setup(t)
 	encryptedFiles = make(map[string][]byte)
 
 	project := "my-project"
