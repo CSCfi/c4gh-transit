@@ -85,6 +85,8 @@ test:
   tags:
     - sds
   resource_group: testing
+  before_script:
+    - docker stop $(docker ps -q --filter "name=test-C4ghTransit") 2>/dev/null || true
   script:
     - export ARTIFACTORY_USER=$ARTIFACTORY_USER
     - export ARTIFACTORY_USER_PASSWORD=$ARTIFACTORY_USER_PASSWORD
