@@ -9,6 +9,10 @@ include:
     ref: main
     file: 'releases.yml'
 
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
 .go-cache:
   variables:
     GOPATH: $CI_PROJECT_DIR/.go
@@ -71,6 +75,7 @@ test:
     # We don't run on tags and default branch
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: always
+      interruptible: true
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: never
     - if: "$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS"
@@ -79,6 +84,7 @@ test:
       when: never
   tags:
     - sds
+  resource_group: testing
   script:
     - export ARTIFACTORY_USER=$ARTIFACTORY_USER
     - export ARTIFACTORY_USER_PASSWORD=$ARTIFACTORY_USER_PASSWORD
@@ -118,8 +124,8 @@ build-binary:
       dotenv: binary_job_id.env
 
 # This job requires that you have deleted c4ghtransit-fixed from Artifactory.
-# The created binary has such a niche use case that it seemed better to have it 
-# be manually updated and not have proper release tags 
+# The created binary has such a niche use case that it seemed better to have it
+# be manually updated and not have proper release tags
 build-fixed-binary:
   stage: build
   tags:
@@ -132,7 +138,7 @@ build-fixed-binary:
     - mkdir -p output
     - jf config import "${JF_CONFIG}"
   script:
-    - | 
+    - |
       cp dev-tools/mock_entropy.go.txt c4ghtransit/mock_entropy.go
       go mod tidy
 
