@@ -9,6 +9,10 @@ include:
     ref: main
     file: 'releases.yml'
 
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
 .go-cache:
   variables:
     GOPATH: $CI_PROJECT_DIR/.go
@@ -71,6 +75,7 @@ test:
     # We don't run on tags and default branch
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       when: always
+      interruptible: true
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: never
     - if: "$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS"
@@ -79,6 +84,9 @@ test:
       when: never
   tags:
     - sds
+  resource_group: testing
+  before_script:
+    - docker stop $(docker ps -q --filter "name=test-C4ghTransit") 2>/dev/null || true
   script:
     - export ARTIFACTORY_USER=$ARTIFACTORY_USER
     - export ARTIFACTORY_USER_PASSWORD=$ARTIFACTORY_USER_PASSWORD
@@ -92,7 +100,7 @@ build-binary:
   rules:
     - if: '$CI_COMMIT_TAG !~ "/^$/"'
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
-      when: always
+      when: never
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: never
   before_script:
@@ -104,26 +112,11 @@ build-binary:
     - CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit c4ghtransit/cmd/c4ghtransit/main.go
     # Scan binary
     - jf s --licenses output/c4ghtransit --repo ${ARTIFACTORY_BINARY_REPO}
-    - >
-      if [ "$CI_COMMIT_BRANCH" == "$CI_DEFAULT_BRANCH" ]; then
-        echo Pushing latest plugin build
-        jf rt u output/c4ghtransit "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit"
-
-        cp dev-tools/mock_entropy.go.txt c4ghtransit/mock_entropy.go
-        go mod tidy
-
-        CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit-fixed c4ghtransit/cmd/c4ghtransit/main.go
-        jf s --licenses output/c4ghtransit-fixed --repo ${ARTIFACTORY_BINARY_REPO}
-
-        echo Pushing latest plugin build with fixed public keys
-        jf rt u output/c4ghtransit-fixed "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-fixed"
-      else
-        echo Pushing "${CI_COMMIT_TAG}" plugin build
-        jf rt u output/c4ghtransit $ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
-      fi
+    # Push binary
+    - echo Pushing "${CI_COMMIT_TAG}" plugin build
+    - jf rt u output/c4ghtransit $ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${CI_COMMIT_TAG}
   after_script:
     - echo "BINARY_JOB_ID=$CI_JOB_ID" >> binary_job_id.env
-    - rm -f c4ghtransit/mock_entropy.go
   artifacts:
     expose_as: 'c4ghtransit'
     paths:
@@ -131,6 +124,33 @@ build-binary:
     expire_in: never
     reports:
       dotenv: binary_job_id.env
+
+# This job requires that you have deleted c4ghtransit-fixed from Artifactory.
+# The created binary has such a niche use case that it seemed better to have it
+# be manually updated and not have proper release tags
+build-fixed-binary:
+  stage: build
+  tags:
+    - sds
+  rules:
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: manual
+      allow_failure: true
+  before_script:
+    - mkdir -p output
+    - jf config import "${JF_CONFIG}"
+  script:
+    - |
+      cp dev-tools/mock_entropy.go.txt c4ghtransit/mock_entropy.go
+      go mod tidy
+
+      CGO_ENABLED=0 GOARCH=amd64 go build -tags netgo -a -v -o output/c4ghtransit-fixed c4ghtransit/cmd/c4ghtransit/main.go
+      jf s --licenses output/c4ghtransit-fixed --repo ${ARTIFACTORY_BINARY_REPO}
+
+      echo Pushing latest plugin build with fixed public keys
+      jf rt u output/c4ghtransit-fixed "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-fixed"
+  after_script:
+    - rm -f c4ghtransit/mock_entropy.go
 
 build-openapi:
   stage: build
