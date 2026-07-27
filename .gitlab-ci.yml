@@ -189,23 +189,9 @@ build-openapi:
 
 release:
   extends: .automated-release
-  needs:
-    - job: prepare-release
-      artifacts: true
-    - job: generate-changelog
-      artifacts: true
-      optional: true
-    - job: build-binary
-      artifacts: true
-    - job: build-openapi
-      artifacts: true
   release:
     description: $(cat release_changes.md)
     assets:
       links:
         - name: c4ghtransit-${RELEASE_VERSION} (artifactory)
           url: $ARTIFACTORY_URL/artifactory/$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-${RELEASE_VERSION}
-        - name: c4ghtransit-${RELEASE_VERSION} (gitlab)
-          url: $CI_PROJECT_URL/-/jobs/$BINARY_JOB_ID/artifacts/raw/dev-tools/openapi.json
-        - name: c4ghtransit-${RELEASE_VERSION}-openapi-schema.json
-          url: $CI_PROJECT_URL/-/jobs/$OPENAPI_JOB_ID/artifacts/raw/output/c4ghtransit
