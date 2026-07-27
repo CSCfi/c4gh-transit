@@ -7,9 +7,24 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 
 ## [Unreleased]
 
+## [2026.7.0] - 2026-07-27
+
 ### Added
 
+- the job that creates the `c4ghtransit-fixed` binary can only be triggered manually since the job first requires that the old version of the binary is manually removed from Artifactory
+- before running `test` job, stop any vault containers left behind from other cancelled `test` jobs
 - push to Artifactory a `c4ghtransit-fixed` binary when CI runs in default branch. It's project keys are fixed to a certain value.
+
+### Changed
+
+- make `test` jobs interruptible
+- prevent two `test` CI jobs from running at the same time
+
+### Removed
+
+- (users) `build-openapi` from running in the default branch
+- (users) updates to latest binary version
+- broken links from release
 
 ## [2026.2.0] - 2026-02-02
 
@@ -354,7 +369,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 - fix some linting mises
 - fix incorrect key usage in file ingestion and export
 
-[Unreleased]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2026.2.0...HEAD
+[Unreleased]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2026.7.0...HEAD
+[2026.7.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2026.2.0...2026.7.0
 [2026.2.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2025.2.0...2026.2.0
 [2025.2.0]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.2...2025.2.0
 [2024.02.2]: https://gitlab.ci.csc.fi/sds-dev/c4gh-transit/compare/2024.02.1...2024.02.2
