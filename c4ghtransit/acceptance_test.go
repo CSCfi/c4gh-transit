@@ -27,7 +27,7 @@ import (
 	stepwise "github.com/CSCfi/vault-testing-stepwise"
 )
 
-const vaultImage = "sds-docker.artifactory.ci.csc.fi/hashicorp/vault:1.21.4"
+const vaultImage = "sds-docker.artifactory.ci.csc.fi/hashicorp/vault:2.0.4"
 
 var (
 	oldKey         string
