@@ -13,7 +13,7 @@ require (
 	github.com/neicnordic/crypt4gh v1.15.0
 	golang.org/x/crypto v0.55.0
 	golang.org/x/sync v0.22.0
-	gotest.tools v2.2.0+incompatible
+	gotest.tools/v3 v3.5.2
 )
 
 require (
