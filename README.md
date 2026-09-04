@@ -36,7 +36,7 @@ docker run --rm \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    sds-docker.artifactory.ci.csc.fi/golang:1.26.4-trixie \
+    sds-docker.artifactory.ci.csc.fi/golang:1.27.1-trixie \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
@@ -53,7 +53,7 @@ docker run --rm \
     --env XDG_CACHE_HOME=/tmp \
     -v ${PWD}/:/c4ghtransit \
     -w /c4ghtransit \
-    sds-docker.artifactory.ci.csc.fi/golang:1.26.4-alpine \
+    sds-docker.artifactory.ci.csc.fi/golang:1.27.1-alpine \
     go build -v -o /c4ghtransit/vault/plugins/c4ghtransit /c4ghtransit/c4ghtransit/cmd/c4ghtransit/main.go
 ```
 
