@@ -65,7 +65,7 @@ jfrog-go-audit:
     - jf config import "${JF_CONFIG_READ_ONLY}"
   script:
     # Audit Go project
-    - jf audit --go --licenses --extended-table --watches=$WATCH
+    - jf audit --go --extended-table --watches=$WATCH
 
 test:
   stage: test
@@ -164,7 +164,7 @@ scan-binary:
   before_script:
     - jf config import "${JF_CONFIG_READ_ONLY}"
   script:
-    - jf scan --licenses --extended-table --watches=$WATCH output/c4ghtransit
+    - jf scan --extended-table --watches=$WATCH output/c4ghtransit
 
 push-binary:
   stage: push
