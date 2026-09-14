@@ -2,13 +2,13 @@ package c4ghtransit
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -226,7 +226,7 @@ func (b *C4ghBackend) autoRotateKeys(ctx context.Context, req *logical.Request) 
 
 	// Collect errors in a multierror to ensure a single failure doesn't prevent
 	// all keys from being rotated.
-	var errs *multierror.Error
+	var errs error
 
 	for _, key := range keys {
 		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
@@ -234,7 +234,7 @@ func (b *C4ghBackend) autoRotateKeys(ctx context.Context, req *logical.Request) 
 			Name:    key,
 		}, b.GetRandomReader())
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(err)
 
 			continue
 		}
@@ -246,11 +246,11 @@ func (b *C4ghBackend) autoRotateKeys(ctx context.Context, req *logical.Request) 
 
 		err = b.rotateIfRequired(ctx, req, key, p)
 		if err != nil {
-			errs = multierror.Append(errs, err)
+			errs = errors.Join(err)
 		}
 	}
 
-	return errs.ErrorOrNil()
+	return errs
 }
 
 // rotateIfRequired rotates a key if it is due for autorotation.
