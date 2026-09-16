@@ -13,7 +13,7 @@ include:
     file: 'releases.yml'
 
 default:
-  image: ${ARTIFACTORY_SERVER}/sds/sdd-common-ci:2026.9.1@sha256:c18688356abffc8a4f18d7239aa9d1cbb19ec5ae42ca52788cf6cf6e0795345e
+  image: ${ARTIFACTORY_SERVER}/sds/sdd-common-ci:2026.9.3@sha256:f4e479e35c1155e8422bec6d23315f5e6fae997188c6d41076600a6804ab9089
 
 workflow:
   auto_cancel:
