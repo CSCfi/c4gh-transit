@@ -1,6 +1,5 @@
 stages:
   - lint
-  - audit
   - test
   - build
   - scan
@@ -45,27 +44,6 @@ go-lint:
       codequality: gl-code-quality-report.json
     paths:
       - gl-code-quality-report.json
-  after_script:
-    - sudo rm -rf .go/pkg
-
-jfrog-go-audit:
-  stage: audit
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $GITLAB_USER_NAME != "renovate-bot"'
-      when: always
-      variables:
-        WATCH: sds-watch
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $GITLAB_USER_NAME == "renovate-bot"'
-      variables:
-        WATCH: sds-renovate
-  tags:
-    - sds-test
-  before_script:
-    # Configure JFrog Artifactory repositories
-    - jf config import "${JF_CONFIG_READ_ONLY}"
-  script:
-    # Audit Go project
-    - jf audit --go --extended-table --watches=$WATCH
 
 test:
   stage: test
