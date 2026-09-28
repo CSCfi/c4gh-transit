@@ -6,7 +6,7 @@ toolchain go1.27.1
 
 require (
 	github.com/CSCfi/vault-testing-stepwise v0.10.2
-	github.com/bmatcuk/doublestar/v4 v4.10.1
+	github.com/bmatcuk/doublestar/v4 v4.10.2
 	github.com/fatih/structs v1.1.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/vault/api v1.23.0
