@@ -12,7 +12,7 @@ require (
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/sdk v0.25.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/neicnordic/crypt4gh v1.15.0
+	github.com/neicnordic/crypt4gh v1.15.2
 	golang.org/x/crypto v0.56.0
 	golang.org/x/sync v0.22.0
 	gotest.tools/v3 v3.5.2
