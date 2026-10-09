@@ -1,4 +1,4 @@
-FROM sds-docker.artifactory.ci.csc.fi/golang:1.27.1@sha256:f44f6e88636cfb311f9ebace870ded69d943f227bb3cb27d32ffd84ea18c43ea AS plugin
+FROM sds-docker.artifactory.ci.csc.fi/golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c AS plugin
 
 WORKDIR /usr/src
 
@@ -12,7 +12,7 @@ RUN apt-get -y update && \
 COPY . .
 RUN go build -ldflags=-w -v -o /usr/local/bin/c4ghtransit ./c4ghtransit/cmd/c4ghtransit/main.go
 
-FROM sds-docker.artifactory.ci.csc.fi/golang:1.27.1@sha256:f44f6e88636cfb311f9ebace870ded69d943f227bb3cb27d32ffd84ea18c43ea
+FROM sds-docker.artifactory.ci.csc.fi/golang:1.27.2@sha256:5bc7f572bbaa98885a3a1fd9c0aa76b59e3e14e8628bfc316bbfd0c701e4818c
 
 RUN apt-get -y update && \
     apt-get -y upgrade && \
