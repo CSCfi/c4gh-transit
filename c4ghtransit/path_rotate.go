@@ -35,17 +35,15 @@ func (b *C4ghBackend) pathRotateWrite(ctx context.Context, req *logical.Request,
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: req.Storage,
-		Name:    name,
+		Storage:     req.Storage,
+		Name:        name,
+		WriteLocked: true,
 	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
 	}
 
 	// Rotate the policy

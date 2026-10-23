@@ -105,9 +105,7 @@ func (b *C4ghBackend) pathImportWrite(ctx context.Context, req *logical.Request,
 	}
 
 	if p != nil {
-		if b.System().CachingDisabled() {
-			p.Unlock()
-		}
+		p.Unlock()
 
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}

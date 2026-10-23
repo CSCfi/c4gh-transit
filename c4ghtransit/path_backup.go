@@ -196,7 +196,7 @@ func (b *C4ghBackend) backupFiles(ctx context.Context, storage logical.Storage, 
 	for _, c := range containers {
 		g.Go(func() error {
 			container := strings.TrimSuffix(c, "/")
-			listPath = fmt.Sprintf("files/%s/%s/", project, container)
+			listPath := fmt.Sprintf("files/%s/%s/", project, container)
 			files, err := storage.List(ctx, listPath)
 			if err != nil {
 				return err
