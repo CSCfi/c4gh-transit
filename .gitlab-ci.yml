@@ -18,15 +18,9 @@ workflow:
   auto_cancel:
     on_new_commit: interruptible
 
-.go-cache:
-  variables:
-    GOPATH: $CI_PROJECT_DIR/.go
-    GOCACHE: $CI_PROJECT_DIR/.go-build
-
 
 go-lint:
   stage: lint
-  extends: .go-cache
   variables:
     GOLANGCI_LINT_CACHE: $CI_PROJECT_DIR/.cache
   rules:
