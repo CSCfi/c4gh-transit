@@ -57,10 +57,14 @@ test:
   tags:
     - sds-test
   resource_group: testing
-  script:
+  variables:
+    # Needs to be an alpine image
+    GO_DOCKER_IMAGE: "${ARTIFACTORY_SERVER}/golang:1.27.3-alpine@sha256:b8c9b82affbbb82a020bbcf998dad2ba9516944ac7e883524642a481a9505e9c"
+  before_script:
     - export ARTIFACTORY_USER=$ARTIFACTORY_READ_ONLY_USER
     - export ARTIFACTORY_USER_PASSWORD=$ARTIFACTORY_READ_ONLY_PASSWORD
     - export ARTIFACTORY_SERVER=$ARTIFACTORY_SERVER
+  script:
     - go test -timeout 40m -v ./c4ghtransit
 
 build-binary:
