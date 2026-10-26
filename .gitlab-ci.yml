@@ -23,6 +23,7 @@ workflow:
     GOPATH: $CI_PROJECT_DIR/.go
     GOCACHE: $CI_PROJECT_DIR/.go-build
 
+
 go-lint:
   stage: lint
   extends: .go-cache
@@ -144,17 +145,27 @@ scan-binary:
   script:
     - jf scan --extended-table --watches=$WATCH output/c4ghtransit
 
-push-binary:
+.push-job:
   stage: push
   tags:
     - sds-upload
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: "$VAULT_SERVER_URL"
+  secrets:
+    JF_CONFIG:
+      vault: gitlab-ci-upload-runner/protected/JF_CONFIG@secret
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - jf config import "$JF_CONFIG"
+
+push-binary:
+  extends: .push-job
   rules:
     - if: $CI_COMMIT_TAG
   variables:
     JFROG_CLI_BUILD_PROJECT: sds
-  before_script:
-    # Configure JFrog Artifactory repositories
-    - jf config import "${JF_CONFIG}"
   script:
     - echo Pushing "${CI_COMMIT_TAG}" plugin build
     - >
@@ -163,15 +174,11 @@ push-binary:
     - jf rt build-publish "$CI_PROJECT_NAME" "$CI_COMMIT_TAG"
 
 push-fixed-binary:
-  stage: push
-  tags:
-    - sds-upload
+  extends: .push-job
   needs:
     - build-fixed-binary
   rules:
     - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
-  before_script:
-    - jf config import "${JF_CONFIG}"
   script:
     - echo Pushing latest plugin build with fixed public keys
     - jf rt u output/c4ghtransit-fixed "$ARTIFACTORY_BINARY_REPO/$CI_PROJECT_NAME/c4ghtransit-fixed"
