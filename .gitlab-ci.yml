@@ -10,6 +10,9 @@ include:
   - project: 'sds-dev/releases'
     ref: main
     file: 'releases.yml'
+  - project: 'sds-dev/devops/renovate-runner'
+    ref: main
+    file: 'templates/renovate-config-validator.gitlab-ci.yml'
 
 default:
   image: "${ARTIFACTORY_SERVER}/sds/sdd-common-ci:2026.10.0@sha256:4dbef76cae6000a9fed4636a748d6411a7c0959e2f9e5562090eaec572f74c26"
@@ -39,6 +42,11 @@ go-lint:
       codequality: gl-code-quality-report.json
     paths:
       - gl-code-quality-report.json
+
+renovate-config-validator:
+  stage: lint
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 test:
   stage: test
