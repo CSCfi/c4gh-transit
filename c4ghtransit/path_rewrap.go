@@ -59,9 +59,6 @@ func (b *C4ghBackend) pathRewrapWrite(ctx context.Context, req *logical.Request,
 	if p == nil {
 		return nil, nil
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	latestKey, ok := p.Keys[strconv.Itoa(p.LatestVersion)]

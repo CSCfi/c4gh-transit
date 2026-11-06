@@ -162,9 +162,7 @@ func (b *C4ghBackend) pathKeyUpdate(
 	if p == nil {
 		return nil, fmt.Errorf("error generating key: returned policy was nil")
 	}
-	if b.System().CachingDisabled() {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	resp := &logical.Response{}
 	if !upserted {
@@ -206,9 +204,6 @@ func (b *C4ghBackend) pathKeyRead(
 		}
 
 		return b.pathKeyRead(ctx, req, d)
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
 	}
 	defer p.Unlock()
 

@@ -510,9 +510,6 @@ func (b *C4ghBackend) readFile(
 	if p == nil {
 		return logical.ErrorResponse("No project encryption key available."), nil
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	// Get the allowed receivers' key from whitelist
@@ -621,9 +618,6 @@ func (b *C4ghBackend) pathFilesWrite(
 	}
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
 	}
 	defer p.Unlock()
 

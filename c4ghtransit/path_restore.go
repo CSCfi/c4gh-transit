@@ -114,26 +114,26 @@ func (b *C4ghBackend) restoreFile(ctx context.Context, storage logical.Storage, 
 	project = fileData.Name
 	resp := &logical.Response{}
 
+	keyBytes, err := base64.StdEncoding.DecodeString(fileData.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	var keyData keysutil.KeyData
+	if err = jsonutil.DecodeJSON(keyBytes, &keyData); err != nil {
+		return nil, err
+	}
+
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: storage,
 		Name:    project,
 	}, b.GetRandomReader())
 
+	// Release the lock before RestorePolicy, which acquires its own
 	skipKey := false
-	if err == nil && p != nil && !force {
-		keyBytes, err := base64.StdEncoding.DecodeString(fileData.Key)
-		if err != nil {
-			return nil, err
-		}
-
-		var keyData keysutil.KeyData
-		if err = jsonutil.DecodeJSON(keyBytes, &keyData); err != nil {
-			return nil, err
-		}
-
-		if reflect.DeepEqual(p.Keys, keyData.Policy.Keys) {
-			skipKey = true
-		}
+	if err == nil && p != nil {
+		skipKey = !force && reflect.DeepEqual(p.Keys, keyData.Policy.Keys)
+		p.Unlock()
 	}
 
 	if !skipKey {

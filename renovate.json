@@ -1,3 +1,13 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.gitlab-ci\\.yml$/"],
+      "matchStrings": [
+        "GO_DOCKER_IMAGE:\\s*\"?\\$\\{ARTIFACTORY_SERVER\\}/(?<depName>[^:\"\\s]+):(?<currentValue>[^@\"\\s]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"?"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
 }
